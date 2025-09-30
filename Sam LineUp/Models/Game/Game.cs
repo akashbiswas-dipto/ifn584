@@ -55,10 +55,19 @@ namespace LineUpV3.Models.GameSpace
         
         public bool Turn(IGamePrinter printer)
         {
+            FinalState finalState;
             if (TurnNumber % 5 == 0 && GameMode == 3)
             {
                 // spin the board 90 degrees
+                printer.Show(Board, "Before Spin");
                 SpinBoard();
+                printer.Show(Board, "After Spin");
+
+                // Resolve the winner if any
+                finalState = GetFinalStateAfterSpin(Current, Other);
+
+                if (UpdateIfFinal(finalState, printer, Current.Id, Current.Name, Other.Id, Other.Name))
+                    return false;
             }
 
             if (Status != GameStatus.InProgress)
@@ -172,7 +181,7 @@ namespace LineUpV3.Models.GameSpace
                 printer.Show(Board, "After effect");
             }
 
-            var finalState = GetFinalStateAfterMove(disc.Type, row0, col0, Current, Other);
+            finalState = GetFinalStateAfterMove(disc.Type, row0, col0, Current, Other);
 
             if (UpdateIfFinal(finalState, printer, player.Id, player.Name, Other.Id, Other.Name))
                 return false;
@@ -201,8 +210,6 @@ namespace LineUpV3.Models.GameSpace
 
             // will cause the columns to re-align to the floor
             Board.ApplyGravityAll();
-
-            // Maybe re-use the before and after drop logic here, to show before and after turn
         }
 
         // ========== Undo/Redo functions ==========
@@ -210,6 +217,16 @@ namespace LineUpV3.Models.GameSpace
         // Should be a case of leveraging the existing GameState, to save an array, or maybe dict, with turn and game state. 
 
         // can then "load" a previous state using the LoadGame functions.
+
+        // Looks like we need to be able to redo, so may need to add a . after the load. 
+
+        // 1.0, 2.0 means initial game
+        // 1.1, 2.1 means loaded branch game
+        // 1.0, 2.0, 3.0, (UNDO) 2.1, 3.1, 4.1, (UNDO) 1.0, (REDO) 3.0.
+
+        // Can lift code from the save load game logic, and lift printer(board, title) to show the state at each of them.
+
+        // Turns into 5D chess very quickly.
 
 
         // ============ Helpers ============
@@ -312,6 +329,24 @@ namespace LineUpV3.Models.GameSpace
 
             // otherwise, final state not reached, keep going
             return FinalState.None;
+        }
+
+        private FinalState GetFinalStateAfterSpin(IPlayer current, IPlayer other)
+        {
+            bool currentWon = Board.CheckForWin(current.Id);
+            bool otherWon = Board.CheckForWin(other.Id);
+
+            // run through the win conditions
+            if (currentWon && otherWon)
+                return FinalState.DoubleWin;
+            if (currentWon)
+                return FinalState.CurrentWin;
+            if (otherWon)
+                return FinalState.OpponentWin;
+            if (Board.IsFull)
+                return FinalState.Draw;
+
+            return FinalState.None; 
         }
 
         private bool UpdateIfFinal(
