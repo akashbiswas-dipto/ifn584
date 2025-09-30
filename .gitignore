@@ -1,0 +1,7 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/Sam LineUp/.vs/LineUpV3
+/Sam LineUp/bin/Debug/net8.0
+/Sam LineUp/obj
