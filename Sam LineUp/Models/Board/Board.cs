@@ -13,10 +13,10 @@ namespace LineUpV3.Models.BoardSpace
     {
         // =========== Setup =============
         // Board dimensions
-        public int Rows { get; }
-        public int Cols { get; }
+        public int Rows { get; private set; }
+        public int Cols { get; private set; }
 
-        private readonly IDisc?[,] _grid;
+        private IDisc?[,] _grid;
 
         public int WinLength => ComputeWinLength(Rows, Cols);
 
@@ -242,6 +242,21 @@ namespace LineUpV3.Models.BoardSpace
                 Console.Write($" {c+1} |");
             }
         }
+        public void RotateBoard() {
+            int newcol = Rows;
+            int newrow = Cols;
+            IDisc?[,] NewGrid = new IDisc?[newrow, newcol];
+            for(int r = 0;r < Rows; r++) {
+                for (int c = 0;c < Cols; c++) {
+                    NewGrid[c, Rows-r-1] = _grid[r,c]; 
+                }
+            }
+            _grid = NewGrid;
+            Rows = newrow;
+            Cols = newcol;
+            ApplyGravityAll();
+            LastMove = null;
 
     }
+}
 }
