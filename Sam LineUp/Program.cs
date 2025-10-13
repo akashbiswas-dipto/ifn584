@@ -1,18 +1,17 @@
-﻿using System;
-using LineUpV3.Models.BoardSpace;
+﻿using LineUpV3.Models.BoardSpace;
+using LineUpV3.Models.GameSpace;
 using LineUpV3.Models.PlayerSpace;
 using LineUpV3.Models.RunnerSpace;
-using LineUpV3.Models.GameSpace;
 using LineUpV3.Models.SavingSpace;
 using LineUpV3.UtilSpace;
 
 
-namespace LineUpV3
-{
-    internal class Program
+namespace LineUpV3 
     {
-        static void Main()
+    internal class Program 
         {
+        static void Main() 
+            {                                
             Console.WriteLine("Welcome to Line Up!");
 
             var game = new Game();
@@ -109,3 +108,4 @@ namespace LineUpV3
         }
     }
 }
+            
