@@ -52,7 +52,7 @@ namespace LineUpV3.Models.GameSpace
         private IPlayer Other => (CurrentPlayer == PlayerId.Player1) ? Player2 : Player1;
 
         // ============ Game Turn ========
-        
+
         public bool Turn(IGamePrinter printer)
         {
             FinalState finalState;
@@ -201,16 +201,37 @@ namespace LineUpV3.Models.GameSpace
 
         private void SpinBoard()
         {
-            // Add the code here to cause it to rotate.
-            Console.WriteLine("Function should take in the current board object, and transpose the grid");
+            // Get the current board state
+            int oldRows = Board.Rows;
+            int oldCols = Board.Cols;
 
-            Console.WriteLine("Will need to also change the board object, to set the new column and row size, for reloading and saving");
+            // Create a new board with transposed dimensions
+            var rotatedBoard = new Board(oldCols, oldRows);
 
-            // Could also use the LoadGameState function here, to make the new board object, and load the game state, overriding the existing board with a new one in the new dimensions. 
+            //Perform the 90 drgree clockwise rotation
+            //Rotation formula: original(r,c) -> new (c, oldRows - 1 - r)
+            for (int r = 0; r < oldRows; r++)
+            {
+                for (int c = 0; c < oldCols; c++)
+                {
+                    var disc = Board.GetCell(r, c);
+                    if (disc != null)
+                    {
+                        // Calculate new position for rotation
+                        int newRow = c;
+                        int newCol = oldRows - 1 - r;
+                        rotatedBoard.SetCell(newRow, newCol, disc);
+                    }
+                }
+            }
 
-            // will cause the columns to re-align to the floor
-            Board.ApplyGravityAll();
+            // Apply gravity to make all discs fall to the bottom
+            rotatedBoard.ApplyGravityAll();
+
+            // Replace the current board with the rotated one
+            Board = rotatedBoard;
         }
+
 
         // ========== Undo/Redo functions ==========
 
