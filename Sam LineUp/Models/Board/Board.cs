@@ -22,12 +22,15 @@ namespace LineUpV3.Models.BoardSpace
 
         public (int row, int col)? LastMove { get; private set; }
 
+        public int GameMode { get; set; }
         // Constructor
         public Board(int rows = 6, int cols = 7)
         {
-            if (rows < 6 || cols < 7) 
-                throw new ArgumentOutOfRangeException(
-                    "Board must be at least 6x7 in size.");
+            if (GameMode != 3) {
+                if (Math.Min(rows, cols) < 6 || Math.Max(rows, cols) < 7)
+                    throw new ArgumentOutOfRangeException(
+                        "Board must be at least 6x7 in size.");
+            }
             Rows = rows;
             Cols = cols;
 
@@ -242,6 +245,7 @@ namespace LineUpV3.Models.BoardSpace
                 Console.Write($" {c+1} |");
             }
         }
+        // ========== Rotate Board functions ==========
         public void RotateBoard() {
             int newcol = Rows;
             int newrow = Cols;
@@ -254,9 +258,9 @@ namespace LineUpV3.Models.BoardSpace
             _grid = NewGrid;
             Rows = newrow;
             Cols = newcol;
+
             ApplyGravityAll();
             LastMove = null;
-
-    }
+        }
 }
 }

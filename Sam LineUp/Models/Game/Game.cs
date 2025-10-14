@@ -36,7 +36,7 @@ namespace LineUpV3.Models.GameSpace
             Player1 = player1;
             Player2 = player2;
             GameMode = gameMode;
-
+            Board.GameMode = gameMode;
             // set the initial discs
             Player1.ConfigureForBoard(board, GameMode);
             Player2.ConfigureForBoard(board, GameMode);
@@ -46,7 +46,7 @@ namespace LineUpV3.Models.GameSpace
             NextPlayer = PlayerId.Player2;
 
             Status = GameStatus.InProgress;
-            TurnNumber = 1;
+            TurnNumber = 0;
         }
         private IPlayer Current => (CurrentPlayer == PlayerId.Player1) ? Player1 : Player2;
         private IPlayer Other => (CurrentPlayer == PlayerId.Player1) ? Player2 : Player1;
@@ -56,11 +56,13 @@ namespace LineUpV3.Models.GameSpace
         public bool Turn(IGamePrinter printer)
         {
             FinalState finalState;
-            if (TurnNumber % 5 == 0 && GameMode == 3)
+            if (TurnNumber == 5 && GameMode == 3)
             {
+                TurnNumber = 0;
                 // spin the board 90 degrees
                 printer.Show(Board, "Before Spin");
-                SpinBoard();
+                Board.RotateBoard();
+               
                 printer.Show(Board, "After Spin");
 
                 // Resolve the winner if any
@@ -195,41 +197,6 @@ namespace LineUpV3.Models.GameSpace
             TurnNumber++;
 
             return true;
-        }
-
-        // ============ Spin Rules =============
-
-        private void SpinBoard()
-        {
-            // Get the current board state
-            int oldRows = Board.Rows;
-            int oldCols = Board.Cols;
-
-            // Create a new board with transposed dimensions
-            var rotatedBoard = new Board(oldCols, oldRows);
-
-            //Perform the 90 drgree clockwise rotation
-            //Rotation formula: original(r,c) -> new (c, oldRows - 1 - r)
-            for (int r = 0; r < oldRows; r++)
-            {
-                for (int c = 0; c < oldCols; c++)
-                {
-                    var disc = Board.GetCell(r, c);
-                    if (disc != null)
-                    {
-                        // Calculate new position for rotation
-                        int newRow = c;
-                        int newCol = oldRows - 1 - r;
-                        rotatedBoard.SetCell(newRow, newCol, disc);
-                    }
-                }
-            }
-
-            // Apply gravity to make all discs fall to the bottom
-            rotatedBoard.ApplyGravityAll();
-
-            // Replace the current board with the rotated one
-            Board = rotatedBoard;
         }
 
 

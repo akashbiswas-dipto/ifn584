@@ -53,12 +53,11 @@ namespace LineUpV3.Models.PlayerSpace
             {
                 return false;
             }
-
-            // make a new board with the same dimensions as the current board
-            var temp = new Board(board.Rows, board.Cols);
-
             // Create a temporary copy of the board to simulate the move
             var snap = board.SaveBoard();
+
+            // make a new board with the same dimensions as the current board
+            var temp = new Board(snap.Rows, snap.Cols);
 
             // load the snapshot into the temp board
             temp.LoadBoard(snap);
