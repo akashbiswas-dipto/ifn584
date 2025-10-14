@@ -51,7 +51,6 @@ namespace LineUpV3.Models.BoardSpace
         }
 
         // Gravity Commands (for changes after special disc effects)
-        // Good for Assignment 2 later
         public void ApplyGravityInColumn(int col)
         {
             int write = Rows - 1;
@@ -78,7 +77,10 @@ namespace LineUpV3.Models.BoardSpace
         // =========== Rotation Framework =============
         public void ApplyRotation(IRotation rotation)
         {
+            // set the new grid
             var (newGrid, newRows, newCols) = rotation.Rotate(_grid, Rows, Cols);
+
+            // override the original values
             _grid = newGrid;
             Rows = newRows;
             Cols = newCols;

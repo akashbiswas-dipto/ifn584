@@ -33,13 +33,20 @@ namespace LineUpV3.Models.GameSpace
         private IRotation? _rotationStrategy;
 
         public void SetUp(Board board, IPlayer player1, IPlayer player2, 
-                          int gameMode, IRotation? rotationStrategy = null)
+                          int gameMode)
         {
             Board = board;
             Player1 = player1;
             Player2 = player2;
             GameMode = gameMode;
-            _rotationStrategy = rotationStrategy; // Store strategy for later use
+
+
+            //If spin mode, set rotation strategy for spin mode
+            _rotationStrategy = null;
+            if (gameMode == 3) // Spin mode
+            {
+                _rotationStrategy = new ClockwiseRotation();
+            }
 
             // set the initial discs
             Player1.ConfigureForBoard(board, GameMode);
@@ -60,21 +67,6 @@ namespace LineUpV3.Models.GameSpace
         public bool Turn(IGamePrinter printer)
         {
             FinalState finalState;
-            if (TurnNumber == 5 && GameMode == 3)
-            {
-                TurnNumber = 0;
-                // spin the board 90 degrees
-                printer.Show(Board, "Before Spin");
-                SpinBoard();
-               
-                printer.Show(Board, "After Spin");
-
-                // Resolve the winner if any
-                finalState = GetFinalStateAfterSpin(Current, Other);
-
-                if (UpdateIfFinal(finalState, printer, Current.Id, Current.Name, Other.Id, Other.Name))
-                    return false;
-            }
 
             if (Status != GameStatus.InProgress)
                 return false;
@@ -195,6 +187,22 @@ namespace LineUpV3.Models.GameSpace
             // End-of-turn snapshot
             // printer.Show(Board, "End of turn");
 
+            // AT The end of every fifth turn, spin the board
+            if (TurnNumber > 0 && TurnNumber % 5 == 0 && GameMode == 3)
+            {
+                // spin the board 90 degrees
+                printer.Show(Board, "Before Spin");
+                SpinBoard();
+
+                printer.Show(Board, "After Spin");
+
+                // Resolve the winner if any
+                finalState = GetFinalStateAfterSpin(Current, Other);
+
+                if (UpdateIfFinal(finalState, printer, Current.Id, Current.Name, Other.Id, Other.Name))
+                    return false;
+            }
+
             // Next player + turn count
             CurrentPlayer = NextPlayer;
             NextPlayer = (NextPlayer == PlayerId.Player1) ? PlayerId.Player2 : PlayerId.Player1;
@@ -213,7 +221,7 @@ namespace LineUpV3.Models.GameSpace
                     "Rotation strategy is not configured for this game mode.");
             }
 
-        // Apply the rotation to the board
+            // Apply the rotation to the board
             Board.ApplyRotation(_rotationStrategy);
         }
         

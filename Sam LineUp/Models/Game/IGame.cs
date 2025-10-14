@@ -34,7 +34,7 @@ namespace LineUpV3.Models.GameSpace
     {
         // Game Commands
         // Setup
-        void SetUp(Board board, IPlayer player1, IPlayer player2, int GameMode, IRotation? rotationStrategy = null);
+        void SetUp(Board board, IPlayer player1, IPlayer player2, int GameMode);
 
         bool Turn(IGamePrinter printer);
 

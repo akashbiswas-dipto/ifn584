@@ -92,13 +92,6 @@ namespace LineUpV3
                 }
 
                 var board = new Board(rows: height, cols: width);
-
-                //Create rotation strategy for spin mode
-                IRotation? rotationStrategy = null;
-                if (mode == 3) // Spin mode
-                {
-                    rotationStrategy = new ClockwiseRotation();
-                }
                 
                 game.SetUp(board, player1, player2, mode);
             }
