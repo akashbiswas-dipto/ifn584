@@ -92,6 +92,14 @@ namespace LineUpV3
                 }
 
                 var board = new Board(rows: height, cols: width);
+
+                //Create rotation strategy for spin mode
+                IRotation? rotationStrategy = null;
+                if (mode == 3) // Spin mode
+                {
+                    rotationStrategy = new ClockwiseRotation();
+                }
+                
                 game.SetUp(board, player1, player2, mode);
             }
 
@@ -99,13 +107,14 @@ namespace LineUpV3
                 ? new TestRunner(game, printer)   // scripted input for test mode
                 : new ConsoleRunner(game, printer); // normal play for all other modes
             runner.Run();
-            
+
             Console.WriteLine("Game over. Thanks for playing!");
 
             if (!isTestMode) Console.ReadLine(); // to pause at the end of normal play
-            
-            
+
+
         }
+        
     }
 }
             

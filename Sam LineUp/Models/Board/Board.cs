@@ -22,15 +22,12 @@ namespace LineUpV3.Models.BoardSpace
 
         public (int row, int col)? LastMove { get; private set; }
 
-        public int GameMode { get; set; }
         // Constructor
         public Board(int rows = 6, int cols = 7)
         {
-            if (GameMode != 3) {
-                if (Math.Min(rows, cols) < 6 || Math.Max(rows, cols) < 7)
-                    throw new ArgumentOutOfRangeException(
-                        "Board must be at least 6x7 in size.");
-            }
+            if ((rows < 6 || cols < 7) && (rows < 7 || cols < 6)) // minimum 6x7 or 7x6y
+                throw new ArgumentOutOfRangeException(
+                    "Board must be at least 6x7 in size.");
             Rows = rows;
             Cols = cols;
 
@@ -77,7 +74,21 @@ namespace LineUpV3.Models.BoardSpace
         {
             for (int c = 0; c < Cols; c++) ApplyGravityInColumn(c);
         }
+        
+        // =========== Rotation Framework =============
+        public void ApplyRotation(IRotation rotation)
+        {
+            var (newGrid, newRows, newCols) = rotation.Rotate(_grid, Rows, Cols);
+            _grid = newGrid;
+            Rows = newRows;
+            Cols = newCols;
 
+            // After rotation, apply gravity to all columns
+            ApplyGravityAll();
+            
+            // LastMove is now invalid after rotation
+            LastMove = null;
+        }
         // =========== Save/Load Commands =============
         public BoardState SaveBoard()
         {
@@ -230,10 +241,10 @@ namespace LineUpV3.Models.BoardSpace
 
             {
                 // Left border
-                Console.Write($" {Rows-r} |"); // inverted order for display per Assignment
+                Console.Write($" {Rows - r} |"); // inverted order for display per Assignment
                 for (int c = 0; c < Cols; c++)
                 {
-                    var Disc = GetCell(r,c);
+                    var Disc = GetCell(r, c);
                     char ch = Disc?.Symbol ?? ' ';
                     Console.Write($" {ch} |");
                 }
@@ -242,25 +253,8 @@ namespace LineUpV3.Models.BoardSpace
             Console.Write("   |");
             for (int c = 0; c < Cols; c++)
             {
-                Console.Write($" {c+1} |");
+                Console.Write($" {c + 1} |");
             }
-        }
-        // ========== Rotate Board functions ==========
-        public void RotateBoard() {
-            int newcol = Rows;
-            int newrow = Cols;
-            IDisc?[,] NewGrid = new IDisc?[newrow, newcol];
-            for(int r = 0;r < Rows; r++) {
-                for (int c = 0;c < Cols; c++) {
-                    NewGrid[c, Rows-r-1] = _grid[r,c]; 
-                }
-            }
-            _grid = NewGrid;
-            Rows = newrow;
-            Cols = newcol;
-
-            ApplyGravityAll();
-            LastMove = null;
         }
 }
 }

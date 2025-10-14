@@ -30,13 +30,17 @@ namespace LineUpV3.Models.GameSpace
 
         public int GameMode { get; private set; }
 
-        public void SetUp(Board board, IPlayer player1, IPlayer player2, int gameMode)
+        private IRotation? _rotationStrategy;
+
+        public void SetUp(Board board, IPlayer player1, IPlayer player2, 
+                          int gameMode, IRotation? rotationStrategy = null)
         {
             Board = board;
             Player1 = player1;
             Player2 = player2;
             GameMode = gameMode;
-            Board.GameMode = gameMode;
+            _rotationStrategy = rotationStrategy; // Store strategy for later use
+
             // set the initial discs
             Player1.ConfigureForBoard(board, GameMode);
             Player2.ConfigureForBoard(board, GameMode);
@@ -61,7 +65,7 @@ namespace LineUpV3.Models.GameSpace
                 TurnNumber = 0;
                 // spin the board 90 degrees
                 printer.Show(Board, "Before Spin");
-                Board.RotateBoard();
+                SpinBoard();
                
                 printer.Show(Board, "After Spin");
 
@@ -199,6 +203,20 @@ namespace LineUpV3.Models.GameSpace
             return true;
         }
 
+        // ============ Spin Rules =============
+        // Execute board rotation using the configured strategy
+            private void SpinBoard()
+        {
+            if (_rotationStrategy == null)
+            {
+                throw new InvalidOperationException(
+                    "Rotation strategy is not configured for this game mode.");
+            }
+
+        // Apply the rotation to the board
+            Board.ApplyRotation(_rotationStrategy);
+        }
+        
 
         // ========== Undo/Redo functions ==========
 

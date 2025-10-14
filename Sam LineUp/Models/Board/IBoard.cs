@@ -32,6 +32,9 @@ namespace LineUpV3.Models.BoardSpace
         // Gravity command methods
         void ApplyGravityInColumn(int col);
         void ApplyGravityAll();
+
+        // Rotation command method
+        void ApplyRotation(IRotation rotation);
     }
     // interface for read-only board access
     internal interface IBoardReadonly
