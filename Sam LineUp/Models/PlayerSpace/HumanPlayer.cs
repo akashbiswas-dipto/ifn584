@@ -44,14 +44,19 @@ namespace LineUpV3.Models.PlayerSpace
                     HelpText.ShowHelpInTurn();
                     continue;
                 }
-
+                bool isValidToken = true;
                 DiscType chosen = t switch
                 {
+                    "O" => DiscType.Ordinary,
                     "B" => DiscType.Boring,
                     "E" => DiscType.Exploding,
                     "M" => DiscType.Magnetic,
-                    _ => DiscType.Ordinary
+                    _ => (isValidToken = false, DiscType.Ordinary).Item2 // dummy value; flag invalid
                 };
+                if (!isValidToken) {
+                    Console.WriteLine("Invalid input. Please enter O, B, E, or M.");
+                    continue;
+                }
 
                 if (Count(chosen) <= 0)
                 {
