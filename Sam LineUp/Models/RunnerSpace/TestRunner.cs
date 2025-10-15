@@ -133,8 +133,8 @@ namespace LineUpV3.Models.RunnerSpace
         private static string NormaliseDisc(string s)
         {
             char c = char.ToUpperInvariant(s[0]);
-            if (c is 'O' or 'B' or 'E') return c.ToString();
-            throw new ArgumentException($"Invalid disc '{s}'. Use O, B or E.");
+            if (c is 'O' or 'B' or 'E' or 'M') return c.ToString();
+            throw new ArgumentException($"Invalid disc '{s}'. Use O, B, E or M.");
         }
     }
 }

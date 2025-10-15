@@ -6,6 +6,7 @@ using LineUpV3.Models.PlayerSpace.ConcreteFactory;
 using LineUpV3.Models.RunnerSpace;
 using LineUpV3.Models.SavingSpace;
 using LineUpV3.UtilSpace;
+using System.Reflection;
 
 
 
@@ -35,6 +36,19 @@ namespace LineUpV3
                 Console.WriteLine("Invalid Selection. Try Again.");
                 Console.Write("[N]ew Game,[L]oad Game,[H]elp,[Q]uit (default = N):");
             }
+        }
+
+        private static void RunGame(Game game)
+        {
+            var printer = new ConsoleGamePrinter();
+            IGameRunner runner = game.IsTestMode
+                ? new TestRunner(game, printer)
+                : new ConsoleRunner(game, printer);
+            runner.Run();
+
+            Console.WriteLine("Game over. Thanks for playing!");
+            Console.WriteLine("\n(Returning to Main Menu)");
+            Console.ReadLine();
         }
 
 
@@ -69,6 +83,7 @@ namespace LineUpV3
                     }
                     game = SaveGame.LoadFromFile(path);
                     Console.WriteLine($"Loaded game from {path}");
+                    RunGame(game);
                 }
                 else
                 {
@@ -80,7 +95,7 @@ namespace LineUpV3
 
                     int runMode = Utils.PromptRunMode();
 
-                    // Factory Method for Game Construction
+                    // Factory Patterns for Game Components
                     IBoardFactory boardF = (mode == 2) ? new ClassicBoardFactory() : new CustomBoardFactory();
                     IPlayersFactory playersF = runMode switch
                     {
@@ -92,23 +107,11 @@ namespace LineUpV3
                     };
                     IRotationFactory rotationF = new RotationByModeFactory();
 
-                    // build game via composite
+                    // Composited using Abstract Factory Pattern. Used to be Builder Pattern.
                     IGameFactory gameF = new CompositeGameFactory(boardF, playersF, rotationF);
                     game = gameF.Build(new GameConfig(rows, cols, mode));
 
-                    var printer = new ConsoleGamePrinter();
-
-
-                    IGameRunner runner = game.IsTestMode
-                        ? new TestRunner(game, printer)
-                        : new ConsoleRunner(game, printer);
-                    runner.Run();
-
-                    Console.WriteLine("Game over. Thanks for playing!");
-
-                    Console.WriteLine("\n(Returning to Main Menu)");
-                    Console.ReadLine();
-
+                    RunGame(game);
                 }
             }
         }
