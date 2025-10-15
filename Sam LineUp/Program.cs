@@ -1,18 +1,17 @@
-﻿using System;
-using LineUpV3.Models.BoardSpace;
+﻿using LineUpV3.Models.BoardSpace;
+using LineUpV3.Models.GameSpace;
 using LineUpV3.Models.PlayerSpace;
 using LineUpV3.Models.RunnerSpace;
-using LineUpV3.Models.GameSpace;
 using LineUpV3.Models.SavingSpace;
 using LineUpV3.UtilSpace;
 
 
-namespace LineUpV3
-{
-    internal class Program
+namespace LineUpV3 
     {
-        static void Main()
+    internal class Program 
         {
+        static void Main() 
+            {                                
             Console.WriteLine("Welcome to Line Up!");
 
             var game = new Game();
@@ -93,6 +92,7 @@ namespace LineUpV3
                 }
 
                 var board = new Board(rows: height, cols: width);
+                
                 game.SetUp(board, player1, player2, mode);
             }
 
@@ -100,12 +100,14 @@ namespace LineUpV3
                 ? new TestRunner(game, printer)   // scripted input for test mode
                 : new ConsoleRunner(game, printer); // normal play for all other modes
             runner.Run();
-            
+
             Console.WriteLine("Game over. Thanks for playing!");
 
             if (!isTestMode) Console.ReadLine(); // to pause at the end of normal play
-            
-            
+
+
         }
+        
     }
 }
+            

@@ -13,10 +13,10 @@ namespace LineUpV3.Models.BoardSpace
     {
         // =========== Setup =============
         // Board dimensions
-        public int Rows { get; }
-        public int Cols { get; }
+        public int Rows { get; private set; }
+        public int Cols { get; private set; }
 
-        private readonly IDisc?[,] _grid;
+        private IDisc?[,] _grid;
 
         public int WinLength => ComputeWinLength(Rows, Cols);
 
@@ -25,7 +25,7 @@ namespace LineUpV3.Models.BoardSpace
         // Constructor
         public Board(int rows = 6, int cols = 7)
         {
-            if (rows < 6 || cols < 7) 
+            if ((rows < 6 || cols < 7) && (rows < 7 || cols < 6)) // minimum 6x7 or 7x6y
                 throw new ArgumentOutOfRangeException(
                     "Board must be at least 6x7 in size.");
             Rows = rows;
@@ -44,14 +44,14 @@ namespace LineUpV3.Models.BoardSpace
 
         public void ClearBoard()
         {
+            Console.WriteLine("Clearing Board...");
             for (int r=0; r < Rows; r++)
-                for (int c=0; c < Cols; c++)
+                for (int c=0; c < Cols; c++)    
                     _grid[r, c] = null;
             LastMove = null;
         }
 
         // Gravity Commands (for changes after special disc effects)
-        // Good for Assignment 2 later
         public void ApplyGravityInColumn(int col)
         {
             int write = Rows - 1;
@@ -74,7 +74,24 @@ namespace LineUpV3.Models.BoardSpace
         {
             for (int c = 0; c < Cols; c++) ApplyGravityInColumn(c);
         }
+        
+        // =========== Rotation Framework =============
+        public void ApplyRotation(IRotation rotation)
+        {
+            // set the new grid
+            var (newGrid, newRows, newCols) = rotation.Rotate(_grid, Rows, Cols);
 
+            // override the original values
+            _grid = newGrid;
+            Rows = newRows;
+            Cols = newCols;
+
+            // After rotation, apply gravity to all columns
+            ApplyGravityAll();
+            
+            // LastMove is now invalid after rotation
+            LastMove = null;
+        }
         // =========== Save/Load Commands =============
         public BoardState SaveBoard()
         {
@@ -227,10 +244,10 @@ namespace LineUpV3.Models.BoardSpace
 
             {
                 // Left border
-                Console.Write($" {Rows-r} |"); // inverted order for display per Assignment
+                Console.Write($" {Rows - r} |"); // inverted order for display per Assignment
                 for (int c = 0; c < Cols; c++)
                 {
-                    var Disc = GetCell(r,c);
+                    var Disc = GetCell(r, c);
                     char ch = Disc?.Symbol ?? ' ';
                     Console.Write($" {ch} |");
                 }
@@ -239,9 +256,8 @@ namespace LineUpV3.Models.BoardSpace
             Console.Write("   |");
             for (int c = 0; c < Cols; c++)
             {
-                Console.Write($" {c+1} |");
+                Console.Write($" {c + 1} |");
             }
         }
-
-    }
+}
 }

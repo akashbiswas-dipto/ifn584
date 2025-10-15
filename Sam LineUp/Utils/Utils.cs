@@ -52,10 +52,12 @@ namespace LineUpV3.UtilSpace
             Console.WriteLine("3. Line Up Spin (twister mode)");
             Console.WriteLine();
             var input = PromptInt("Enter Choice", 1, 3, 1);
+            /*
             if (input == 3) // Drop this once Spin implemented
             {
                 throw new NotImplementedException();
             }
+            */
             return input;
         }
 

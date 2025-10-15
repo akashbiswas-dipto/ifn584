@@ -30,12 +30,23 @@ namespace LineUpV3.Models.GameSpace
 
         public int GameMode { get; private set; }
 
-        public void SetUp(Board board, IPlayer player1, IPlayer player2, int gameMode)
+        private IRotation? _rotationStrategy;
+
+        public void SetUp(Board board, IPlayer player1, IPlayer player2, 
+                          int gameMode)
         {
             Board = board;
             Player1 = player1;
             Player2 = player2;
             GameMode = gameMode;
+
+
+            //If spin mode, set rotation strategy for spin mode
+            _rotationStrategy = null;
+            if (gameMode == 3) // Spin mode
+            {
+                _rotationStrategy = new ClockwiseRotation();
+            }
 
             // set the initial discs
             Player1.ConfigureForBoard(board, GameMode);
@@ -46,29 +57,16 @@ namespace LineUpV3.Models.GameSpace
             NextPlayer = PlayerId.Player2;
 
             Status = GameStatus.InProgress;
-            TurnNumber = 1;
+            TurnNumber = 0;
         }
         private IPlayer Current => (CurrentPlayer == PlayerId.Player1) ? Player1 : Player2;
         private IPlayer Other => (CurrentPlayer == PlayerId.Player1) ? Player2 : Player1;
 
         // ============ Game Turn ========
-        
+
         public bool Turn(IGamePrinter printer)
         {
             FinalState finalState;
-            if (TurnNumber % 5 == 0 && GameMode == 3)
-            {
-                // spin the board 90 degrees
-                printer.Show(Board, "Before Spin");
-                SpinBoard();
-                printer.Show(Board, "After Spin");
-
-                // Resolve the winner if any
-                finalState = GetFinalStateAfterSpin(Current, Other);
-
-                if (UpdateIfFinal(finalState, printer, Current.Id, Current.Name, Other.Id, Other.Name))
-                    return false;
-            }
 
             if (Status != GameStatus.InProgress)
                 return false;
@@ -189,6 +187,22 @@ namespace LineUpV3.Models.GameSpace
             // End-of-turn snapshot
             // printer.Show(Board, "End of turn");
 
+            // AT The end of every fifth turn, spin the board
+            if (TurnNumber > 0 && TurnNumber % 5 == 0 && GameMode == 3)
+            {
+                // spin the board 90 degrees
+                printer.Show(Board, "Before Spin");
+                SpinBoard();
+
+                printer.Show(Board, "After Spin");
+
+                // Resolve the winner if any
+                finalState = GetFinalStateAfterSpin(Current, Other);
+
+                if (UpdateIfFinal(finalState, printer, Current.Id, Current.Name, Other.Id, Other.Name))
+                    return false;
+            }
+
             // Next player + turn count
             CurrentPlayer = NextPlayer;
             NextPlayer = (NextPlayer == PlayerId.Player1) ? PlayerId.Player2 : PlayerId.Player1;
@@ -198,19 +212,19 @@ namespace LineUpV3.Models.GameSpace
         }
 
         // ============ Spin Rules =============
-
-        private void SpinBoard()
+        // Execute board rotation using the configured strategy
+            private void SpinBoard()
         {
-            // Add the code here to cause it to rotate.
-            Console.WriteLine("Function should take in the current board object, and transpose the grid");
+            if (_rotationStrategy == null)
+            {
+                throw new InvalidOperationException(
+                    "Rotation strategy is not configured for this game mode.");
+            }
 
-            Console.WriteLine("Will need to also change the board object, to set the new column and row size, for reloading and saving");
-
-            // Could also use the LoadGameState function here, to make the new board object, and load the game state, overriding the existing board with a new one in the new dimensions. 
-
-            // will cause the columns to re-align to the floor
-            Board.ApplyGravityAll();
+            // Apply the rotation to the board
+            Board.ApplyRotation(_rotationStrategy);
         }
+        
 
         // ========== Undo/Redo functions ==========
 
