@@ -1,5 +1,6 @@
 ﻿using LineUpV3.Models.BoardSpace;
 using LineUpV3.Models.DiscSpace;
+using LineUpV3.UtilSpace;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,12 +17,18 @@ namespace LineUpV3.Models.PlayerSpace
         {
             while (true)
             {
-                Console.Write($"\n{Name} ({Id}) — column 1..{board.Cols} (Q to quit): ");
+                Console.Write($"\n{Name} ({Id}) — column 1..{board.Cols} (H for Help, Q to quit): ");
                 string? raw = Console.ReadLine()?.Trim();
 
                 if (string.IsNullOrEmpty(raw)) continue;
                 if (raw.Equals("Q", StringComparison.OrdinalIgnoreCase))
                     return new PlayerDecision(Quit: true, Col0: null, Type: null);
+
+                if (raw.Equals("H", StringComparison.OrdinalIgnoreCase))
+                {
+                    HelpText.ShowHelpInTurn();
+                    continue;
+                }
 
                 if (!int.TryParse(raw, out int col1)) continue;
                 int col0 = col1 - 1;
@@ -29,8 +36,15 @@ namespace LineUpV3.Models.PlayerSpace
                 if (board.IsColumnFull(col0)) { Console.WriteLine("Column full."); continue; }
 
                 // Disc type
-                Console.Write($"\n{Name} - {DiscsRemaining} discs left \nChoose disc type: [O=Ordinary {_bag[DiscType.Ordinary]}, B=Boring {_bag[DiscType.Boring]}, E=Exploding {_bag[DiscType.Exploding]}]: ");
+                Console.Write($"\n{Name} - {DiscsRemaining} discs left \nChoose disc type: [O=Ordinary {_bag[DiscType.Ordinary]}, B=Boring {_bag[DiscType.Boring]}, E=Exploding {_bag[DiscType.Exploding]}] (H for help): ");
                 string? t = Console.ReadLine()?.Trim().ToUpperInvariant();
+
+                if (t == "H")
+                {
+                    HelpText.ShowHelpInTurn();
+                    continue;
+                }
+
                 DiscType chosen = t switch
                 {
                     "B" => DiscType.Boring,
