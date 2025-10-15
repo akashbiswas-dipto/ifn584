@@ -31,7 +31,8 @@ namespace LineUpV3.Models.GameSpace
             var rotation = _rotationFactory.Create(gameConfig.GameMode);
 
             // return the constructed game
-            return Game.Create(board, player1, player2, rotation);
+            return Game.Create(board, player1, player2, gameConfig.GameMode, rotation, isTest);
+
         }
 
 
