@@ -1,4 +1,5 @@
-﻿using LineUpV3.Models.BoardSpace;
+﻿using LineUpV3.Models.Board;
+using LineUpV3.Models.BoardSpace;
 using LineUpV3.Models.GameSpace;
 using LineUpV3.Models.PlayerSpace;
 using LineUpV3.Models.RunnerSpace;
@@ -6,8 +7,8 @@ using LineUpV3.Models.SavingSpace;
 using LineUpV3.UtilSpace;
 
 
-namespace LineUpV3 
-    {
+namespace LineUpV3
+{
     internal class Program 
         {
         static void Main() 
