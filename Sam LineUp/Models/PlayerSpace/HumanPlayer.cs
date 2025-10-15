@@ -29,12 +29,13 @@ namespace LineUpV3.Models.PlayerSpace
                 if (board.IsColumnFull(col0)) { Console.WriteLine("Column full."); continue; }
 
                 // Disc type
-                Console.Write($"\n{Name} - {DiscsRemaining} discs left \nChoose disc type: [O=Ordinary {_bag[DiscType.Ordinary]}, B=Boring {_bag[DiscType.Boring]}, E=Exploding {_bag[DiscType.Exploding]}]: ");
+                Console.Write($"\n{Name} - {DiscsRemaining} discs left \nChoose disc type: [O=Ordinary {_bag[DiscType.Ordinary]}, B=Boring {_bag[DiscType.Boring]}, E=Exploding {_bag[DiscType.Exploding]}, M= Magnetic {_bag[DiscType.Magnetic]}]: ");
                 string? t = Console.ReadLine()?.Trim().ToUpperInvariant();
                 DiscType chosen = t switch
                 {
                     "B" => DiscType.Boring,
                     "E" => DiscType.Exploding,
+                    "M" => DiscType.Magnetic,
                     _ => DiscType.Ordinary
                 };
 

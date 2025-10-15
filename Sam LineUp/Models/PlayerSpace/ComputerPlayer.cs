@@ -28,6 +28,8 @@ namespace LineUpV3.Models.PlayerSpace
                 // ~10% chance Exploding if any left
                 else if (roll < 0.2 && Count(DiscType.Exploding) > 0)
                     chosen = DiscType.Exploding;
+                else if (roll <0.3 && Count(DiscType.Magnetic)> 0)
+                    chosen = DiscType.Magnetic;
                 // Otherwise, prefer Ordinary if available
                 else if (Count(DiscType.Ordinary) > 0)
                     chosen = DiscType.Ordinary;
@@ -36,6 +38,8 @@ namespace LineUpV3.Models.PlayerSpace
                     chosen = DiscType.Boring;
                 else if (Count(DiscType.Exploding) > 0)
                     chosen = DiscType.Exploding;
+                else if (Count(DiscType.Magnetic) > 0)
+                    chosen = DiscType.Magnetic;
                 else
                     // should catch this earlier, but in case
                     throw new InvalidOperationException("No discs left to pick.");
@@ -102,7 +106,7 @@ namespace LineUpV3.Models.PlayerSpace
             }
 
             // check what types User still has
-            DiscType[] tryTypes = { DiscType.Exploding, DiscType.Boring, DiscType.Ordinary };
+            DiscType[] tryTypes = { DiscType.Exploding, DiscType.Boring, DiscType.Magnetic, DiscType.Ordinary };
 
             foreach (var type in tryTypes)
             {

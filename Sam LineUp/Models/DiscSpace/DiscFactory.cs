@@ -16,6 +16,7 @@ namespace LineUpV3.Models.DiscSpace
             DiscType.Ordinary => new OrdinaryDisc(owner),
             DiscType.Boring => new BoringDisc(owner),
             DiscType.Exploding => new ExplodingDisc(owner),
+            DiscType.Magnetic => new MagneticDisc(owner),
             _ => throw new ArgumentOutOfRangeException(nameof(type))
         };
     }
