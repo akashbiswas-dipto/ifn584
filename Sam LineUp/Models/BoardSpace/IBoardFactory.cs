@@ -8,6 +8,7 @@ namespace LineUpV3.Models.BoardSpace
 {
     interface IBoardFactory
     {
+        IBoard Create(int rows, int cols);
 
     }
 }
