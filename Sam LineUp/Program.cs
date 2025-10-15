@@ -14,7 +14,6 @@ namespace LineUpV3
             {                                
             Console.WriteLine("Welcome to Line Up!");
 
-            var game = new Game();
             var printer = new ConsoleGamePrinter();
 
             bool startNewGame = false;
@@ -55,51 +54,35 @@ namespace LineUpV3
             {
                 mode = Utils.PromptGameMode();
 
-                if (mode != 2)
-                {
-                    (width, height) = Utils.PromptGameSettings();
-                }
-                else //Overwrite with classic presets
-                {
-                    width = 8;
-                    height = 9;
-                }
+                int cols, rows;
+                if (mode != 2) (cols, rows) = Utils.PromptGameSettings();
+                else { cols = 8; rows = 9; }
 
                 runMode = Utils.PromptRunMode();
 
-                IPlayer player1, player2;
-                switch (runMode)
+
+                // Factory Method for Game Construction
+                IBoardFactory boardF = (mode == 2) ? new ClassicBoardFactory() : new CustomBoardFactory();
+                IPlayersFactory playersF = runMode switch
                 {
-                    case 1:
-                        player1 = new HumanPlayer(PlayerId.Player1, "P1");
-                        player2 = new HumanPlayer(PlayerId.Player2, "P2");
-                        break;
-                    case 2:
-                        player1 = new HumanPlayer(PlayerId.Player1, "P1");
-                        player2 = new ComputerPlayer(PlayerId.Player2, "CPU");
-                        break;
-                    case 3:
-                        player1 = new ComputerPlayer(PlayerId.Player1, "CPU1");
-                        player2 = new ComputerPlayer(PlayerId.Player2, "CPU2");
-                        break;
-                    case 4:
-                        player1 = new HumanPlayer(PlayerId.Player1, "Test1");
-                        player2 = new HumanPlayer(PlayerId.Player2, "Test2");
-                        isTestMode = true;
-                        break;
-                    default:
-                        throw new InvalidOperationException("Invalid game mode");
-                }
+                    1 => new HvHFactory(),
+                    2 => new HvCpuFactory(),
+                    3 => new CpuCpuFactory(),
+                    4 => new TestHvHFactory(),
+                    _ => throw new InvalidOperationException("Invalid run mode")
+                };
+                IRotationFactory rotationF = new RotationByModeFactory();
 
-                var board = new Board(rows: height, cols: width);
-                
-                game.SetUp(board, player1, player2, mode);
+                // build game via composite
+                IGameFactory gameF = new CompositeGameFactory(boardF, playersF, rotationF);
+                var game = gameF.Build(new GameConfig(rows, cols, mode));
+
+
+                var printer = new ConsoleGamePrinter();
+                IGameRunner runner = (game.IsTestMode) ? new TestRunner(game, printer) : new ConsoleRunner(game, printer);
+                runner.Run();
+
             }
-
-            IGameRunner runner = (isTestMode)
-                ? new TestRunner(game, printer)   // scripted input for test mode
-                : new ConsoleRunner(game, printer); // normal play for all other modes
-            runner.Run();
 
             Console.WriteLine("Game over. Thanks for playing!");
 
