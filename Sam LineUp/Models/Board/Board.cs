@@ -44,8 +44,9 @@ namespace LineUpV3.Models.BoardSpace
 
         public void ClearBoard()
         {
+            Console.WriteLine("Clearing Board...");
             for (int r=0; r < Rows; r++)
-                for (int c=0; c < Cols; c++)
+                for (int c=0; c < Cols; c++)    
                     _grid[r, c] = null;
             LastMove = null;
         }
