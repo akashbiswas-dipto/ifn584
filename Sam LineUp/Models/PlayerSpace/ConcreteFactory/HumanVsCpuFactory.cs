@@ -8,9 +8,9 @@ namespace LineUpV3.Models.PlayerSpace.ConcreteFactory
 {
     internal sealed class HumanVsCpuFactory: IPlayersFactory
     {
-        public (IPlayer, IPlayer, bool) Create =>
-            (new HumanPlayer(PlayerId.Player1, "P1"),
-            new ComputerPlayer(PlayerId.Player2, "CPU"),
-            false);
+        public (IPlayer player1, IPlayer player2, bool isTest) Create()
+            => (new HumanPlayer(PlayerId.Player1, "P1"),
+                new ComputerPlayer(PlayerId.Player2, "CPU"),
+                false);
     }
 }

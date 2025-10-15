@@ -46,7 +46,6 @@ namespace LineUpV3.Models.GameSpace
                 Player1 = player1,
                 Player2 = player2,
                 GameMode = gameMode,
-                _rotationStrategy = rotation,
                 CurrentPlayer = PlayerId.Player1,
                 NextPlayer = PlayerId.Player2,
                 Status = GameStatus.InProgress,
