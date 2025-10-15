@@ -45,8 +45,8 @@ namespace LineUpV3.Models.BoardSpace
         public void ClearBoard()
         {
             Console.WriteLine("Clearing Board...");
-            for (int r=0; r < Rows; r++)
-                for (int c=0; c < Cols; c++)    
+            for (int r = 0; r < Rows; r++)
+                for (int c = 0; c < Cols; c++)
                     _grid[r, c] = null;
             LastMove = null;
         }
@@ -74,7 +74,7 @@ namespace LineUpV3.Models.BoardSpace
         {
             for (int c = 0; c < Cols; c++) ApplyGravityInColumn(c);
         }
-        
+
         // =========== Rotation Framework =============
         public void ApplyRotation(IRotation rotation)
         {
@@ -88,7 +88,7 @@ namespace LineUpV3.Models.BoardSpace
 
             // After rotation, apply gravity to all columns
             ApplyGravityAll();
-            
+
             // LastMove is now invalid after rotation
             LastMove = null;
         }
@@ -105,7 +105,7 @@ namespace LineUpV3.Models.BoardSpace
         }
 
         public void LoadBoard(BoardState s)
-        { 
+        {
             if (s.Cells is null || s.Cells.Length != Rows * Cols)
                 throw new ArgumentException("Snapshot cells length invalid.");
 
@@ -138,7 +138,7 @@ namespace LineUpV3.Models.BoardSpace
 
         public bool IsColumnFull(int col)
         {
-            if (col < 0 || col >= Cols) 
+            if (col < 0 || col >= Cols)
                 throw new ArgumentOutOfRangeException(nameof(col));
             // column is full if top cell is occupied
             return _grid[0, col] != null;
@@ -240,24 +240,40 @@ namespace LineUpV3.Models.BoardSpace
         }
         public void PrintBoard()
         {
-            for (int r = 0; r < Rows; r++)
+            int labelWidth = (Rows >= 10 || Cols >= 10) ? 2 : 1;
+            string leftMargin = " " + new string(' ', labelWidth) + " |";
 
+            for (int r = 0; r < Rows; r++)
             {
                 // Left border
-                Console.Write($" {Rows - r} |"); // inverted order for display per Assignment
+                string rowLabel = (Rows - r).ToString(labelWidth == 2 ? "D2" : "D1");
+                Console.Write($" {rowLabel} |");
+
+                // Cells
                 for (int c = 0; c < Cols; c++)
                 {
-                    var Disc = GetCell(r, c);
-                    char ch = Disc?.Symbol ?? ' ';
-                    Console.Write($" {ch} |");
+                    var disc = GetCell(r, c);
+                    char ch = disc?.Symbol ?? ' ';
+
+                    if (labelWidth == 1)
+                        Console.Write($" {ch} |");
+                    else
+                        Console.Write($" {ch,2} |");
                 }
                 Console.WriteLine();
             }
-            Console.Write("   |");
+            if (labelWidth == 1)
+                Console.Write("   |");
+            else
+                Console.Write("    |");
+
+            // footer columns
             for (int c = 0; c < Cols; c++)
             {
-                Console.Write($" {c + 1} |");
+                string colLabel = (c + 1).ToString(labelWidth == 2 ? "D2" : "D1");
+                Console.Write($" {colLabel} |");
             }
+            Console.WriteLine();
         }
-}
+    }
 }

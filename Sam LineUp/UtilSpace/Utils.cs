@@ -61,6 +61,7 @@ namespace LineUpV3.UtilSpace
             return input;
         }
 
+
         public static int PromptRunMode()
         {
             Console.WriteLine("\n Choose Run Mode:");
