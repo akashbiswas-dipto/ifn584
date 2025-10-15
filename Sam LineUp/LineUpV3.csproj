@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Models\Game\Factories\" />
+    <Folder Include="Models\GameSpace\Factories\" />
   </ItemGroup>
 
 </Project>
