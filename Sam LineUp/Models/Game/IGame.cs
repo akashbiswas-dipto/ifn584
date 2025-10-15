@@ -33,9 +33,9 @@ namespace LineUpV3.Models.GameSpace
     internal interface IGameCommands
     {
         // Game Commands
-        // Setup
-        void SetUp(Board board, IPlayer player1, IPlayer player2, int GameMode);
-
+        // Setup now handled by factories
+        //void Create(Board board, IPlayer player1, IPlayer player2,
+        //                        int gameMode, IRotation? rotation, bool isTestMode);
         bool Turn(IGamePrinter printer);
 
         // will need to save and load the game state
