@@ -12,7 +12,8 @@ namespace LineUpV3.Models.DiscSpace
     {
         Ordinary, // Basic
         Boring, // Drill Disc
-        Exploding // Bomb Disc
+        Exploding, // Bomb Disc
+        Magnetic //pulls friendly disc up one
 
     }
 
