@@ -16,7 +16,7 @@ namespace LineUpV3.Models.GameSpace
     {
 
         // keep track of players, can use the current/next to manage turns and reload.
-        Board Board { get; }
+        IBoard Board { get; }
         IPlayer Player1 { get; }
         IPlayer Player2 { get; }
         PlayerId CurrentPlayer { get; }
@@ -33,9 +33,9 @@ namespace LineUpV3.Models.GameSpace
     internal interface IGameCommands
     {
         // Game Commands
-        // Setup
-        void SetUp(Board board, IPlayer player1, IPlayer player2, int GameMode);
-
+        // Setup now handled by factories
+        //void Create(Board board, IPlayer player1, IPlayer player2,
+        //                        int gameMode, IRotation? rotation, bool isTestMode);
         bool Turn(IGamePrinter printer);
 
         // will need to save and load the game state

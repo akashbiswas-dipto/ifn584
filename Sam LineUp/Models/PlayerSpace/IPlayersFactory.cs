@@ -1,0 +1,12 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace LineUpV3.Models.PlayerSpace
+{
+   internal interface IPlayersFactory {
+        (IPlayer player1, IPlayer player2, bool isTest) Create();
+    }
+}

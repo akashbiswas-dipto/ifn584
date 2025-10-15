@@ -48,7 +48,9 @@ namespace LineUpV3.Models.BoardSpace
 
         // For the Computer Player to use to check for winning moves
         int WinLength { get; }
-        bool IsWinningMove(Board board, int row, int col, PlayerId player_id);
+        bool IsWinningMove(IBoardReadonly board, int row, int col, PlayerId player_id);
+
+        bool CheckForWin(PlayerId player_id);
 
         void PrintBoard();
     }

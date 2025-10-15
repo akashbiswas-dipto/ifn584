@@ -16,7 +16,7 @@ namespace LineUpV3.Models.GameSpace
     internal sealed class Game : IGame
     {
         // =============== Setup ================
-        public Board Board { get; private set; } = null!;
+        public IBoard Board { get; private set; } = null!;
         public IPlayer Player1 { get; private set; } = null!;
         public IPlayer Player2 { get; private set; } = null!;
         public PlayerId CurrentPlayer { get; private set; }
@@ -32,32 +32,32 @@ namespace LineUpV3.Models.GameSpace
 
         private IRotation? _rotationStrategy;
 
-        public void SetUp(Board board, IPlayer player1, IPlayer player2, 
-                          int gameMode)
+        public bool IsTestMode { get; private set; } = false;
+
+        // ============ Create the Board from the Factories ========
+        private Game() { }
+
+        public static Game Create(IBoard board, IPlayer player1, IPlayer player2,
+                                int gameMode, IRotation? rotation, bool isTestMode)
         {
-            Board = board;
-            Player1 = player1;
-            Player2 = player2;
-            GameMode = gameMode;
-
-
-            //If spin mode, set rotation strategy for spin mode
-            _rotationStrategy = null;
-            if (gameMode == 3) // Spin mode
+            var g = new Game
             {
-                _rotationStrategy = new ClockwiseRotation();
-            }
+                Board = board,
+                Player1 = player1,
+                Player2 = player2,
+                GameMode = gameMode,
+                CurrentPlayer = PlayerId.Player1,
+                NextPlayer = PlayerId.Player2,
+                Status = GameStatus.InProgress,
+                TurnNumber = 0,
+                IsTestMode = isTestMode
+            };
 
-            // set the initial discs
-            Player1.ConfigureForBoard(board, GameMode);
-            Player2.ConfigureForBoard(board, GameMode);
+            g._rotationStrategy = rotation;
 
-            // set the starting player
-            CurrentPlayer = PlayerId.Player1;
-            NextPlayer = PlayerId.Player2;
-
-            Status = GameStatus.InProgress;
-            TurnNumber = 0;
+            player1.ConfigureForBoard(board, gameMode);
+            player2.ConfigureForBoard(board, gameMode);
+            return g;
         }
         private IPlayer Current => (CurrentPlayer == PlayerId.Player1) ? Player1 : Player2;
         private IPlayer Other => (CurrentPlayer == PlayerId.Player1) ? Player2 : Player1;
