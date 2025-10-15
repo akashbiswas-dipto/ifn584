@@ -20,7 +20,8 @@ namespace LineUpV3.Models.PlayerSpace
         {
             [DiscType.Ordinary] = 0,
             [DiscType.Boring] = 0,
-            [DiscType.Exploding] = 0
+            [DiscType.Exploding] = 0,
+            [DiscType.Magnetic] = 0
         };
 
         private IReadOnlyDictionary<DiscType, int>? _bagView;
@@ -50,11 +51,12 @@ namespace LineUpV3.Models.PlayerSpace
                 _bag[DiscType.Ordinary] = ordinary;
                 _bag[DiscType.Boring] = specialsEachKind;
                 _bag[DiscType.Exploding] = specialsEachKind;
+                _bag[DiscType.Magnetic] = specialsEachKind;
 
             }
             else
             {
-                // Exactly 2 boring + 2 exploding; remainder ordinary (never negative).
+                // Exactly 2 boring + 2 exploding + 2 Magnetic; remainder ordinary (never negative).
                 const int specialsEachKind = 2;
                 int specialsTotal = specialsEachKind * 2;
                 int ordinary = Math.Max(0, capacity - specialsTotal);
@@ -62,13 +64,18 @@ namespace LineUpV3.Models.PlayerSpace
                 _bag[DiscType.Ordinary] = ordinary;
                 _bag[DiscType.Boring] = specialsEachKind;
                 _bag[DiscType.Exploding] = specialsEachKind;
+                _bag[DiscType.Magnetic] = specialsEachKind;
+
             }
 
 
-            }
+        }
 
         public int DiscsRemaining =>
-            _bag[DiscType.Ordinary] + _bag[DiscType.Boring] + _bag[DiscType.Exploding];
+            _bag[DiscType.Ordinary] 
+            + _bag[DiscType.Boring] 
+            + _bag[DiscType.Exploding] 
+            + _bag[DiscType.Magnetic];
 
         public int Count(DiscType type) => _bag[type];
 
@@ -108,6 +115,7 @@ namespace LineUpV3.Models.PlayerSpace
             _bag[DiscType.Ordinary] = state.AllCounts.TryGetValue(DiscType.Ordinary, out var o) ? o : 0;
             _bag[DiscType.Boring] = state.AllCounts.TryGetValue(DiscType.Boring, out var b) ? b : 0;
             _bag[DiscType.Exploding] = state.AllCounts.TryGetValue(DiscType.Exploding, out var x) ? x : 0;
+            _bag[DiscType.Magnetic] = state.AllCounts.TryGetValue(DiscType.Magnetic, out var m) ? m : 0;
         }
     }    
     

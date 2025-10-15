@@ -17,7 +17,9 @@ namespace LineUpV3.Models.DiscSpace
             { (PlayerId.Player1, DiscType.Boring),    'B' }, 
             { (PlayerId.Player2, DiscType.Boring),    'b' },
             { (PlayerId.Player1, DiscType.Exploding), 'E'  },
-            { (PlayerId.Player2, DiscType.Exploding), 'e'  }
+            { (PlayerId.Player2, DiscType.Exploding), 'e'  },
+            { (PlayerId.Player1, DiscType.Magnetic), 'M'  },
+            { (PlayerId.Player2, DiscType.Magnetic), 'm'  },
             };
 
         public static char Get(PlayerId player, DiscType type)
@@ -36,6 +38,8 @@ namespace LineUpV3.Models.DiscSpace
             ['b'] = (PlayerId.Player2, DiscType.Boring),
             ['E'] = (PlayerId.Player1, DiscType.Exploding),
             ['e'] = (PlayerId.Player2, DiscType.Exploding),
+            ['M'] = (PlayerId.Player1, DiscType.Magnetic),
+            ['m'] = (PlayerId.Player2, DiscType.Magnetic),
         };
 
         public static bool TryParse(char ch, out PlayerId owner, out DiscType type)
