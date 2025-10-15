@@ -164,7 +164,7 @@ namespace LineUpV3.Models.BoardSpace
             return Math.Max(baseline6x7, byProvidedFormula);
         }
 
-        public bool IsWinningMove(Board board, int row, int col, PlayerId playerId)
+        public bool IsWinningMove(IBoardReadonly board, int row, int col, PlayerId playerId)
         {
             // Guard: valid cell and disc belongs to player
             if (row < 0 || row >= board.Rows || col < 0 || col >= board.Cols)
@@ -206,7 +206,7 @@ namespace LineUpV3.Models.BoardSpace
 
         // Counts continous discs owned by playerId starting *next* cell from (row,col)
         // moving stepwise by (dr,dc) until it hits a boundary or a different players disc.
-        private static int CountInDirection(Board board, int row, int col, int dr, int dc, PlayerId playerId)
+        private static int CountInDirection(IBoardReadonly board, int row, int col, int dr, int dc, PlayerId playerId)
         {
             int r = row + dr;
             int c = col + dc;

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LineUpV3.Models.BoardSpace.ConcreteFactory
 {
-    public sealed class RotationByModeFactory: IRotationFactory
+    internal sealed class RotationByModeFactory: IRotationFactory
     {
         // If spin game mode, then set the rule, else null
         public IRotation? Create(int gameMode) => 

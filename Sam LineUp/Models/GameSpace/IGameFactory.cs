@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LineUpV3.Models.GameSpace
 {
-    interface IGameFactory
+    internal interface IGameFactory
     {
         // Rebuild a ready to run game
         Game Build(GameConfig config); 
