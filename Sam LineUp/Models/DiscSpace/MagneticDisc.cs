@@ -28,8 +28,8 @@ namespace LineUpV3.Models.DiscSpace
                     int up = r - 1;
                     var above = board.GetCell(up, col);
 
-                    board.SetCell(up, col, above);
-                    board.SetCell(r, col, cell);
+                    board.SetCell(r, col, above);
+                    board.SetCell(up, col, cell);
 
                     return (true, $"Magnetic disc pulled a friendly disc from ({r},{col}) up to ({up},{col}).");
                 }
