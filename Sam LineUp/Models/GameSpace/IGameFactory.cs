@@ -6,11 +6,9 @@ using System.Threading.Tasks;
 
 namespace LineUpV3.Models.GameSpace
 {
-    public interface IGameFactory
+    interface IGameFactory
     {
         // Rebuild a ready to run game
         Game Build(GameConfig config); 
-        // to swap to test mode if needed
-        bool IsTestMode {  get; }
     }
 }

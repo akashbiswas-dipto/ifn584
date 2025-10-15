@@ -7,12 +7,6 @@ using System.Threading.Tasks;
 namespace LineUpV3.Models.PlayerSpace
 {
    interface IPlayersFactory {
-       (
-            IPlayer player1,
-            IPlayer player2,
-            bool IsTest
-       )
-
-       Create(); 
+        (IPlayer player1, IPlayer player2, bool isTest) Create();
     }
 }
