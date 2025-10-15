@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LineUpV3.Models.BoardSpace
 {
-    interface IRotationFactory
+    internal interface IRotationFactory
     {
         IRotation? Create(int GameMode);
     }

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LineUpV3.Models.BoardSpace
 {
-    interface IBoardFactory
+    internal interface IBoardFactory
     {
         IBoard Create(int rows, int cols);
 

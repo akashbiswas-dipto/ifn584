@@ -8,7 +8,7 @@ using LineUpV3.Models.PlayerSpace;
 
 namespace LineUpV3.Models.GameSpace
 {
-    public sealed class CompositeGameFactory : IGameFactory
+    internal sealed class CompositeGameFactory : IGameFactory
     {
         // individual component factories
         private readonly IBoardFactory _boardFactory;

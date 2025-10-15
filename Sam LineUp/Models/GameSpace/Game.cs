@@ -16,7 +16,7 @@ namespace LineUpV3.Models.GameSpace
     internal sealed class Game : IGame
     {
         // =============== Setup ================
-        public Board Board { get; private set; } = null!;
+        public IBoard Board { get; private set; } = null!;
         public IPlayer Player1 { get; private set; } = null!;
         public IPlayer Player2 { get; private set; } = null!;
         public PlayerId CurrentPlayer { get; private set; }
@@ -34,10 +34,10 @@ namespace LineUpV3.Models.GameSpace
 
         public bool IsTestMode { get; private set; } = false;
 
-        // Forces the factory use
+        // ============ Create the Board from the Factories ========
         private Game() { }
 
-        public static Game Create(Board board, IPlayer player1, IPlayer player2,
+        public static Game Create(IBoard board, IPlayer player1, IPlayer player2,
                                 int gameMode, IRotation? rotation, bool isTestMode)
         {
             var g = new Game

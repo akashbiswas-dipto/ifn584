@@ -7,9 +7,11 @@ using LineUpV3.Models.PlayerSpace;
 using LineUpV3.Models.BoardSpace;
 using LineUpV3.Models.DiscSpace;
 using LineUpV3.Models.GameSpace;
+using LineUpV3.Models.BoardSpace.ConcreteFactory;
 
 namespace LineUpV3.Models.SavingSpace
 {
+    internal sealed record SaveFileDto(GameState State, bool IsTestMode);
     internal static class SaveGame
     {
 
@@ -26,6 +28,7 @@ namespace LineUpV3.Models.SavingSpace
             sb.AppendLine("[Game]");
             sb.AppendLine($"CurrentPlayer={state.CurrentPlayerId}");
             sb.AppendLine($"GameMode={state.GameMode}");
+            sb.AppendLine($"IsTestMode={game.IsTestMode}");
             sb.AppendLine();
 
             // Board info
@@ -44,28 +47,31 @@ namespace LineUpV3.Models.SavingSpace
             File.WriteAllText(path, sb.ToString());
         }
 
-        public static void LoadFromFile(Game game, string path)
+        public static Game LoadFromFile(string path)
         {
             var lines = File.ReadAllLines(path);
             var sections = ParseSections(lines);
 
             // Game section
-            var g = sections["Game"];
-            var currentPlayerId = Enum.Parse<PlayerId>(g["CurrentPlayer"]);
-            var gameMode = int.Parse(g["GameMode"]);
+            var gsec = sections["Game"];
+            var currentPlayerId = Enum.Parse<PlayerId>(gsec["CurrentPlayer"]);
+            var gameMode = int.Parse(gsec["GameMode"]);
+            var isTestMode = bool.TryParse(gsec.GetValueOrDefault("IsTestMode", "false"), out var f) && f;
+
 
             // Board section
-            var bs = sections["Board"];
-            int rows = int.Parse(bs["Rows"]);
-            int cols = int.Parse(bs["Cols"]);
+            var bsec = sections["Board"];
+            int rows = int.Parse(bsec["Rows"]);
+            int cols = int.Parse(bsec["Cols"]);
+            string cells = bsec["Cells"];
 
-            string cells = bs["Cells"];
             (int row, int col)? last = null;
-            if (!string.IsNullOrWhiteSpace(bs.GetValueOrDefault("LastMove", "")))
+            var lastRaw = bsec.GetValueOrDefault("LastMove", "");
+            if (!string.IsNullOrWhiteSpace(lastRaw))
             {
-                var lastMove = bs["LastMove"].Trim('(', ')');
-                var parts = lastMove.Split(',');
-                last = (int.Parse(parts[0]), int.Parse(parts[1]));
+                var s = lastRaw.Trim('(', ')');
+                var parts = s.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length == 2) last = (int.Parse(parts[0]), int.Parse(parts[1]));
             }
 
             var boardState = new BoardState(rows, cols, cells, last);
@@ -74,9 +80,25 @@ namespace LineUpV3.Models.SavingSpace
             var p1 = ReadPlayer(sections["Player1"]);
             var p2 = ReadPlayer(sections["Player2"]);
 
-            // hand state back to a game
+            //rebuild concrete objects
+            IBoard board = new Board(rows, cols);
+            board.LoadBoard(boardState);
+
+            IPlayer player1 = p1.Type == PlayerType.Human
+                ? new HumanPlayer(p1.Id, p1.Name)
+                : new ComputerPlayer(p1.Id, p1.Name);
+
+            IPlayer player2 = p2.Type == PlayerType.Human
+                ? new HumanPlayer(p2.Id, p2.Name)
+                : new ComputerPlayer(p2.Id, p2.Name);
+
+            IRotation? rotation = new RotationByModeFactory().Create(gameMode);
+
+            // hand remade game back
+            var game = Game.Create(board, player1, player2, gameMode, rotation, isTestMode);
             game.LoadGameState(new GameState(boardState, p1, p2, currentPlayerId, gameMode));
 
+            return game;
         }
 
         // ========== Helpers ==========

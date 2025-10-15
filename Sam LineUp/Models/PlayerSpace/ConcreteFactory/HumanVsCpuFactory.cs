@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LineUpV3.Models.PlayerSpace.ConcreteFactory
 {
-    public sealed class HumanVsCpuFactory: IPlayersFactory
+    internal sealed class HumanVsCpuFactory: IPlayersFactory
     {
         public (IPlayer, IPlayer, bool) Create =>
             (new HumanPlayer(PlayerId.Player1, "P1"),

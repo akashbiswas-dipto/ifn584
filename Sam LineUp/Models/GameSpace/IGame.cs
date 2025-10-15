@@ -16,7 +16,7 @@ namespace LineUpV3.Models.GameSpace
     {
 
         // keep track of players, can use the current/next to manage turns and reload.
-        Board Board { get; }
+        IBoard Board { get; }
         IPlayer Player1 { get; }
         IPlayer Player2 { get; }
         PlayerId CurrentPlayer { get; }
