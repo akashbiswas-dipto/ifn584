@@ -504,6 +504,12 @@ namespace LineUpV3.Models.GameSpace
             NextPlayer = (CurrentPlayer == PlayerId.Player1) ? PlayerId.Player2 : PlayerId.Player1;
             Status = GameStatus.InProgress;
         }
+
+        public void LoadHistory(GameState[] history)
+        {
+            _history.Clear();
+            _history.AddRange(history);
+            _historyIndex = history.Length - 1;
+        }
     }
-    
 }
