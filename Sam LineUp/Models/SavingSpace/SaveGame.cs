@@ -8,6 +8,7 @@ using LineUpV3.Models.BoardSpace;
 using LineUpV3.Models.DiscSpace;
 using LineUpV3.Models.GameSpace;
 using LineUpV3.Models.BoardSpace.ConcreteFactory;
+using System.Text.Json;
 
 namespace LineUpV3.Models.SavingSpace
 {
@@ -46,6 +47,14 @@ namespace LineUpV3.Models.SavingSpace
 
             //Undo History
             sb.AppendLine("[History]");
+            // each step on a new line.
+            sb.AppendLine($"Count={history.Length}");
+            for (int i = 0; i < history.Length; i++)
+            {
+                string stateJson = JsonSerializer.Serialize(history[i]);
+                sb.AppendLine($"State{i}={stateJson}");
+            }
+            sb.AppendLine();
 
 
             // output it all to a file as 'save'
@@ -85,6 +94,9 @@ namespace LineUpV3.Models.SavingSpace
             var p1 = ReadPlayer(sections["Player1"]);
             var p2 = ReadPlayer(sections["Player2"]);
 
+            // History reload
+            var history = ReadHistory(sections["History"]);
+
             //rebuild concrete objects
             IBoard board = new Board(rows, cols);
             board.LoadBoard(boardState);
@@ -102,6 +114,7 @@ namespace LineUpV3.Models.SavingSpace
             // hand remade game back
             var game = Game.Create(board, player1, player2, gameMode, rotation, isTestMode);
             game.LoadGameState(new GameState(boardState, p1, p2, currentPlayerId, gameMode));
+            game.LoadHistory(history);
 
             return game;
         }
@@ -141,6 +154,22 @@ namespace LineUpV3.Models.SavingSpace
             };
 
             return new PlayerState(id, type, counts.Values.Sum(), counts, name);
+        }
+
+        private static GameState[] ReadHistory(Dictionary<string, string> sec)
+        {
+            if (!sec.TryGetValue("Count", out var countStr) || !int.TryParse(countStr, out int count))
+                return Array.Empty<GameState>();
+
+            var history = new GameState[count];
+            for (int i = 0; i < count; i++)
+            {
+                if (sec.TryGetValue($"State{i}", out var stateJson))
+                {
+                    history[i] = JsonSerializer.Deserialize<GameState>(stateJson)!;
+                }
+            }
+            return (history);
         }
 
         private static Dictionary<string, Dictionary<string, string>> ParseSections(string[] lines)
