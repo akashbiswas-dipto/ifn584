@@ -109,13 +109,15 @@ namespace LineUpV3.Models.SavingSpace
             sb.AppendLine($"Id={p.Id}");
             sb.AppendLine($"Type={p.Type}");
             sb.AppendLine($"Name={p.Name}");
-            // Bag counts (Ordinary, Boring, Exploding) are already in PlayerState
+            // Bag counts (Ordinary, Boring, Exploding, and now Magnetic) are already in PlayerState
             int o = p.AllCounts.TryGetValue(DiscType.Ordinary, out var _o) ? _o : 0;
             int b = p.AllCounts.TryGetValue(DiscType.Boring, out var _b) ? _b : 0;
             int e = p.AllCounts.TryGetValue(DiscType.Exploding, out var _e) ? _e : 0;
+            int m = p.AllCounts.TryGetValue(DiscType.Magnetic, out var _m) ? _m : 0;
             sb.AppendLine($"Ordinary={o}");
             sb.AppendLine($"Boring={b}");
             sb.AppendLine($"Exploding={e}");
+            sb.AppendLine($"Magnetic={m}");
             sb.AppendLine();
         }
 
@@ -129,7 +131,8 @@ namespace LineUpV3.Models.SavingSpace
             {
                 [DiscType.Ordinary] = int.Parse(sec.GetValueOrDefault("Ordinary", "0")),
                 [DiscType.Boring] = int.Parse(sec.GetValueOrDefault("Boring", "0")),
-                [DiscType.Exploding] = int.Parse(sec.GetValueOrDefault("Exploding", "0"))
+                [DiscType.Exploding] = int.Parse(sec.GetValueOrDefault("Exploding", "0")),
+                [DiscType.Magnetic] = int.Parse(sec.GetValueOrDefault("Magnetic", "0"))
             };
 
             return new PlayerState(id, type, counts.Values.Sum(), counts, name);
