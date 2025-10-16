@@ -27,6 +27,7 @@ namespace LineUpV3.Models.GameSpace
 
         int GameMode { get; }
 
+        GameState[] History { get; }
 
     }
 
