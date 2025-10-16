@@ -102,7 +102,7 @@ namespace LineUpV3.Models.PlayerSpace
             }
             if (openCols.Count == 0) // Shouldn't happen but to cover the edge case
             {
-                return new PlayerDecision(false, null, null);
+                return new PlayerDecision(false, null, null, false, false);
             }
 
             // check what types User still has
@@ -116,7 +116,7 @@ namespace LineUpV3.Models.PlayerSpace
                 {
                     if (WouldThisMoveWin(board, Id, type, col))
                     {
-                        return new PlayerDecision(false, col, type);
+                        return new PlayerDecision(false, col, type, false, false);
                     }
                 }
             }
@@ -128,13 +128,13 @@ namespace LineUpV3.Models.PlayerSpace
             try
             {
                 DiscType fallback = PickRandomDiscType();
-                return new PlayerDecision(false, pickCol, fallback);
+                return new PlayerDecision(false, pickCol, fallback, false, false);
 
             }
             catch (InvalidOperationException)
             {
                 // no discs left, should never happen since we check before calling ChooseMove
-                return new PlayerDecision(false, null, null);
+                return new PlayerDecision(false, null, null, false, false);
             }
         }
     }

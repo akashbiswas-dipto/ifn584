@@ -32,6 +32,14 @@ namespace LineUpV3.Models.GameSpace
 
         private IRotation? _rotationStrategy;
 
+        // make a list of all the game states the game has been in
+        private List<GameState> _history = new();
+        private int _historyIndex = -1;
+
+        // Preserve for load/save
+        public GameState[] History => _history.ToArray();
+        public int HistoryIndex => _historyIndex;
+
         public bool IsTestMode { get; private set; } = false;
 
         // ============ Create the Board from the Factories ========
@@ -104,6 +112,20 @@ namespace LineUpV3.Models.GameSpace
                     printer.Info($"Game saved to '{path}'.");
                 }
                 return false;
+            }
+
+            if (decision.Undo)
+            {
+                Undo();
+                printer.Show(Board, "Undid last move");
+                return true;
+            }
+
+            if (decision.Redo)
+            {
+                Redo();
+                printer.Show(Board, "Redid next move");
+                return true;
             }
 
             // check for nulls
@@ -208,6 +230,18 @@ namespace LineUpV3.Models.GameSpace
             NextPlayer = (NextPlayer == PlayerId.Player1) ? PlayerId.Player2 : PlayerId.Player1;
             TurnNumber++;
 
+
+            // save the state at the end of the turn
+            var EndTurnState = SaveGameState();
+            if (_historyIndex < _history.Count - 1)
+            {
+                // if this is a repeat move, remove the old version.
+                _history.RemoveAt(_historyIndex); 
+            }
+            _history.Add(EndTurnState);
+            _historyIndex = _history.Count - 1;
+
+
             return true;
         }
 
@@ -224,24 +258,29 @@ namespace LineUpV3.Models.GameSpace
             // Apply the rotation to the board
             Board.ApplyRotation(_rotationStrategy);
         }
-        
+
 
         // ========== Undo/Redo functions ==========
 
-        // Should be a case of leveraging the existing GameState, to save an array, or maybe dict, with turn and game state. 
+        //Undo last move, and reload the game state at that point.
+        public void Undo()
+        {
+            if (_historyIndex > 0)
+            {
+                _historyIndex--;
+                LoadGameState(_history[_historyIndex]);
+            }
+        }
 
-        // can then "load" a previous state using the LoadGame functions.
-
-        // Looks like we need to be able to redo, so may need to add a . after the load. 
-
-        // 1.0, 2.0 means initial game
-        // 1.1, 2.1 means loaded branch game
-        // 1.0, 2.0, 3.0, (UNDO) 2.1, 3.1, 4.1, (UNDO) 1.0, (REDO) 3.0.
-
-        // Can lift code from the save load game logic, and lift printer(board, title) to show the state at each of them.
-
-        // Turns into 5D chess very quickly.
-
+        // If it hasn't been overwritten, reload forwards
+        public void Redo()
+        {
+            if (_historyIndex < _history.Count - 1)
+            {
+                _historyIndex++;
+                LoadGameState(_history[_historyIndex]);
+            }
+        }
 
         // ============ Helpers ============
 

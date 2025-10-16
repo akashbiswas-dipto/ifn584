@@ -11,7 +11,7 @@ namespace LineUpV3.Models.PlayerSpace
     enum PlayerId { Player1, Player2 }
     enum PlayerType { Human, Computer }
 
-    internal sealed record PlayerDecision(bool Quit, int? Col0, DiscType? Type);
+    internal sealed record PlayerDecision(bool Quit, int? Col0, DiscType? Type, bool Undo, bool Redo);
 
     internal readonly record struct PlayerState(
         PlayerId Id,

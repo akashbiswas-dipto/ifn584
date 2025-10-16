@@ -20,15 +20,23 @@ namespace LineUpV3.Models.PlayerSpace
                 Console.Write($"\n{Name} ({Id}) — column 1..{board.Cols} (H for Help, Q to quit): ");
                 string? raw = Console.ReadLine()?.Trim();
 
+                // Catch exceptions to normal operation
                 if (string.IsNullOrEmpty(raw)) continue;
                 if (raw.Equals("Q", StringComparison.OrdinalIgnoreCase))
-                    return new PlayerDecision(Quit: true, Col0: null, Type: null);
+                    return new PlayerDecision(Quit: true, Col0: null, Type: null, Undo: false, Redo: false);
 
                 if (raw.Equals("H", StringComparison.OrdinalIgnoreCase))
                 {
                     HelpText.ShowHelpInTurn();
                     continue;
                 }
+
+                // Catch undo/redo
+                if (raw.Equals("U", StringComparison.OrdinalIgnoreCase))
+                    return new PlayerDecision(false, Col0: null, Type: null, Undo: true, Redo: false);
+
+                if (raw.Equals("R", StringComparison.OrdinalIgnoreCase))
+                    return new PlayerDecision(false, null, null, false, true);
 
                 if (!int.TryParse(raw, out int col1)) continue;
                 int col0 = col1 - 1;
@@ -67,7 +75,7 @@ namespace LineUpV3.Models.PlayerSpace
                     continue;
                 }
 
-                return new PlayerDecision(Quit: false, Col0: col0, Type: chosen);
+                return new PlayerDecision(Quit: false, Col0: col0, Type: chosen, Undo: false, Redo:false);
             }
         }
     }

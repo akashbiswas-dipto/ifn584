@@ -18,6 +18,7 @@ namespace LineUpV3.Models.SavingSpace
         public static void SaveToFile(Game game, string path)
         {
             var state = game.SaveGameState();
+            var history = game.History;
             var b = state.Board;
             var p1 = state.Player1;
             var p2 = state.Player2;
@@ -42,6 +43,10 @@ namespace LineUpV3.Models.SavingSpace
             //Players
             WritePlayer(sb, "Player1", p1);
             WritePlayer(sb, "Player2", p2);
+
+            //Undo History
+            sb.AppendLine("[History]");
+
 
             // output it all to a file as 'save'
             File.WriteAllText(path, sb.ToString());
