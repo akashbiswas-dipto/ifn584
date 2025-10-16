@@ -36,7 +36,7 @@ namespace LineUpV3.Models.PlayerSpace
                 if (board.IsColumnFull(col0)) { Console.WriteLine("Column full."); continue; }
 
                 // Disc type
-                Console.Write($"\n{Name} - {DiscsRemaining} discs left \nChoose disc type: [O=Ordinary {_bag[DiscType.Ordinary]}, B=Boring {_bag[DiscType.Boring]}, E=Exploding {_bag[DiscType.Exploding]}, M= Magnetic {_bag[DiscType.Magnetic]}] (H for help):: ");
+                Console.Write($"\n{Name} - {DiscsRemaining} discs left \nChoose disc type: [|Default| O=Ordinary {_bag[DiscType.Ordinary]}, B=Boring {_bag[DiscType.Boring]}, E=Exploding {_bag[DiscType.Exploding]}, M= Magnetic {_bag[DiscType.Magnetic]}] (H for help):: ");
                 string? t = Console.ReadLine()?.Trim().ToUpperInvariant();
 
                 if (t == "H")
@@ -45,20 +45,23 @@ namespace LineUpV3.Models.PlayerSpace
                     continue;
                 }
                 bool isValidToken = true;
-                DiscType chosen = t switch
+                DiscType? chosen = t switch
                 {
                     "O" => DiscType.Ordinary,
+                    ""  => DiscType.Ordinary,
+                    null => DiscType.Ordinary,
                     "B" => DiscType.Boring,
                     "E" => DiscType.Exploding,
                     "M" => DiscType.Magnetic,
-                    _ => (isValidToken = false, DiscType.Ordinary).Item2 // dummy value; flag invalid
+                    // Else change the flag
+                    _ => (isValidToken = false, DiscType.Ordinary).Item2 
                 };
                 if (!isValidToken) {
                     Console.WriteLine("Invalid input. Please enter O, B, E, or M.");
                     continue;
                 }
 
-                if (Count(chosen) <= 0)
+                if (Count(chosen!.Value) <= 0)
                 {
                     Console.WriteLine($"\nNo {chosen} discs left. Try another type.");
                     continue;
