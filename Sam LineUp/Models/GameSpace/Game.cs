@@ -471,7 +471,6 @@ namespace LineUpV3.Models.GameSpace
             {
                 IBoardFactory bf = new CustomBoardFactory();
                 Board = bf.Create(s.Board.Rows, s.Board.Cols);
-
             }
 
             // loading back to the state
