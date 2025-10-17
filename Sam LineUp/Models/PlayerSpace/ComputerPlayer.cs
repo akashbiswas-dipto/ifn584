@@ -1,4 +1,5 @@
 ﻿using LineUpV3.Models.BoardSpace;
+using LineUpV3.Models.BoardSpace.ConcreteFactory;
 using LineUpV3.Models.DiscSpace;
 using System;
 using System.Collections.Generic;
@@ -61,7 +62,8 @@ namespace LineUpV3.Models.PlayerSpace
             var snap = board.SaveBoard();
 
             // make a new board with the same dimensions as the current board
-            var temp = new Board(snap.Rows, snap.Cols);
+            IBoardFactory boardFactory = new CustomBoardFactory();
+            var temp = boardFactory.Create(snap.Rows, snap.Cols);
 
             // load the snapshot into the temp board
             temp.LoadBoard(snap);

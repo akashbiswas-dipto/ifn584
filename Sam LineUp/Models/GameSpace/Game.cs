@@ -7,6 +7,8 @@ using LineUpV3.Models.PlayerSpace;
 using LineUpV3.Models.DiscSpace;
 using LineUpV3.Models.SavingSpace;
 using static LineUpV3.UtilSpace.SavingUtils;
+using LineUpV3.Models.BoardSpace.ConcreteFactory;
+using LineUpV3.Models.PlayerSpace.ConcreteFactory;
 
 
 
@@ -466,22 +468,33 @@ namespace LineUpV3.Models.GameSpace
             /// If the board is missing, or if the shape of the state is different from the current
             /// Ie, post spin. Then recreate it.
             if (Board == null || (Board.Cols != s.Board.Cols || Board.Rows != s.Board.Rows))
-                Board = new Board(s.Board.Rows, s.Board.Cols);
+            {
+                IBoardFactory bf = new CustomBoardFactory();
+                Board = bf.Create(s.Board.Rows, s.Board.Cols);
+
+            }
 
             // loading back to the state
             Board.LoadBoard(s.Board);
 
             // similarly, recreate the players if missing
-            if (Player1 == null || Player2 == null)
+            if ((Player1 == null || Player2 == null) || (Player1.Type != s.Player1.Type || Player2.Type != s.Player2.Type))
             {
-                Player1 = s.Player1.Type == PlayerType.Human
-                    ? new HumanPlayer(s.Player1.Id, s.Player1.Name)
-                    : new ComputerPlayer(s.Player1.Id, s.Player1.Name);
-
-                Player2 = s.Player2.Type == PlayerType.Human
-                    ? new HumanPlayer(s.Player2.Id, s.Player2.Name)
-                    : new ComputerPlayer(s.Player2.Id, s.Player2.Name);
+                if (s.Player1.Type == PlayerType.Human && s.Player2.Type == PlayerType.Human)
+                {
+                    IPlayersFactory playFactory = new HumanVsHumanFactory();
+                    (Player1, Player2, _) = playFactory.Create();
+                }
+                else if (s.Player1.Type == PlayerType.Human && s.Player2.Type == PlayerType.Computer)
+                {
+                    IPlayersFactory playFactory = new HumanVsCpuFactory();
+                    (Player1, Player2, _) = playFactory.Create();
+                }
             }
+
+            // Defensive null check to satisfy the IDE
+            if ((Player1 == null || Player2 == null))
+                throw new InvalidOperationException("Players Could not be loaded");
 
             // load back to state, refilling inventories
             Player1.LoadPlayer(s.Player1);

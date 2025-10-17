@@ -7,6 +7,7 @@ using LineUpV3.Models.BoardSpace.ConcreteFactory;
 using LineUpV3.Models.DiscSpace;
 using LineUpV3.Models.GameSpace;
 using LineUpV3.Models.PlayerSpace;
+using LineUpV3.Models.PlayerSpace.ConcreteFactory;
 using LineUpV3.UtilSpace;
 
 namespace LineUpV3.Models.SavingSpace
@@ -102,27 +103,24 @@ namespace LineUpV3.Models.SavingSpace
 
             /// Rebuild Concrete objects in the shape of the loaded
             /// Override with the loaded's state
+            /// Now using the same factories as creation to make the concrete object
+            IBoardFactory boardF = (gameMode == 2) ? new ClassicBoardFactory() : new CustomBoardFactory();
 
-            // Board
-            IBoard board = new Board(rows, cols);
-            board.LoadBoard(boardState);
+            var runMode = 1;
+            if (p1State.Type == PlayerType.Human && p2State.Type == PlayerType.Computer)
+                runMode = 2;
 
-            //Player 1
-            IPlayer player1 = p1State.Type == PlayerType.Human
-                ? new HumanPlayer(p1State.Id, p1State.Name)
-                : new ComputerPlayer(p1State.Id, p1State.Name);
-            player1.LoadPlayer(p1State);
+            IPlayersFactory playersF = runMode switch
+            {
+                1 => new HumanVsHumanFactory(),
+                2 => new HumanVsCpuFactory(),
+                _ => throw new InvalidOperationException("Invalid run mode")
+            };
 
-            // Player 2
-            IPlayer player2 = p2State.Type == PlayerType.Human
-                ? new HumanPlayer(p2State.Id, p2State.Name)
-                : new ComputerPlayer(p2State.Id, p2State.Name);
-            player2.LoadPlayer(p2State);
+            IRotationFactory rotationF = new RotationByModeFactory();
 
-            // rotation
-            IRotation? rotation = new RotationByModeFactory().Create(gameMode);
-
-            var game = Game.Create(board, player1, player2, gameMode, rotation, isTestMode);
+            IGameFactory gameF = new CompositeGameFactory(boardF, playersF, rotationF);
+            Game game = gameF.Build(new GameConfig(rows, cols, gameMode));
 
             var gameState = new GameState(boardState, p1State, p2State, currentPlayerId, gameMode, turnNumber);
             game.LoadGameState(gameState);
