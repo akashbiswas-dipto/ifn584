@@ -11,7 +11,8 @@ namespace LineUpV3.Models.PlayerSpace
     enum PlayerId { Player1, Player2 }
     enum PlayerType { Human, Computer }
 
-    internal sealed record PlayerDecision(bool Quit, int? Col0, DiscType? Type, string? Command = null); // This allows HumanPLayer to return command without breaking the existing callers.
+    // Reworked to add Command, allows human player to Quit, Undo and Redo.
+    internal sealed record PlayerDecision(int? Col0, DiscType? Type, string? Command = null);
 
 
     internal readonly record struct PlayerState(
@@ -30,7 +31,7 @@ namespace LineUpV3.Models.PlayerSpace
 
         // Inventory info
         int DiscsRemaining { get; }
-        int Count(DiscType type);                          // remaining of a given type
+        int Count(DiscType type);
         IReadOnlyDictionary<DiscType, int> AllCounts { get; }
     }
 
@@ -53,7 +54,7 @@ namespace LineUpV3.Models.PlayerSpace
         void LoadPlayer(PlayerState state);
     }
 
-    internal interface IPlayer : IPlayerReadonly, IPlayerCommands 
+    internal interface IPlayer : IPlayerReadonly, IPlayerCommands
     {
     }
 }

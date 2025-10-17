@@ -28,7 +28,7 @@ namespace LineUpV3.Models.PlayerSpace
                 // ~10% chance Exploding if any left
                 else if (roll < 0.2 && Count(DiscType.Exploding) > 0)
                     chosen = DiscType.Exploding;
-                else if (roll <0.3 && Count(DiscType.Magnetic)> 0)
+                else if (roll < 0.3 && Count(DiscType.Magnetic) > 0)
                     chosen = DiscType.Magnetic;
                 // Otherwise, prefer Ordinary if available
                 else if (Count(DiscType.Ordinary) > 0)
@@ -102,7 +102,7 @@ namespace LineUpV3.Models.PlayerSpace
             }
             if (openCols.Count == 0) // Shouldn't happen but to cover the edge case
             {
-                return new PlayerDecision(false, null, null);
+                return new PlayerDecision(null, null);
             }
 
             // check what types User still has
@@ -116,7 +116,7 @@ namespace LineUpV3.Models.PlayerSpace
                 {
                     if (WouldThisMoveWin(board, Id, type, col))
                     {
-                        return new PlayerDecision(false, col, type);
+                        return new PlayerDecision(col, type);
                     }
                 }
             }
@@ -128,13 +128,13 @@ namespace LineUpV3.Models.PlayerSpace
             try
             {
                 DiscType fallback = PickRandomDiscType();
-                return new PlayerDecision(false, pickCol, fallback);
+                return new PlayerDecision(pickCol, fallback);
 
             }
             catch (InvalidOperationException)
             {
                 // no discs left, should never happen since we check before calling ChooseMove
-                return new PlayerDecision(false, null, null);
+                return new PlayerDecision(null, null);
             }
         }
     }

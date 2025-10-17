@@ -17,27 +17,25 @@ namespace LineUpV3.Models.PlayerSpace
         {
             while (true)
             {
-                Console.Write($"\n{Name} ({Id}) — column 1..{board.Cols} (H for Help, Q to quit, UNDO/REDO): ");
+                Console.Write($"\n{Name} ({Id}) — column 1..{board.Cols} ([H]elp, [Q]uit, [S]ave, [U]ndo, [R]edo):");
                 string? raw = Console.ReadLine()?.Trim();
 
+                // do nothing when null or empty
                 if (string.IsNullOrEmpty(raw)) continue;
-                if (raw.Equals("Q", StringComparison.OrdinalIgnoreCase))
-                    return new PlayerDecision(Quit: true, Col0: null, Type: null);
 
-                if (raw.Equals("H", StringComparison.OrdinalIgnoreCase))
+                switch (raw?.ToUpperInvariant())
                 {
-                    HelpText.ShowHelpInTurn();
-                    continue;
-                }
-
-                // Add undo/redo handling
-                if (raw.Equals("UNDO", StringComparison.OrdinalIgnoreCase))
-                {
-                    return new PlayerDecision(Quit: false, Col0: null, Type: null, Command: "undo");
-                }
-                if (raw.Equals("REDO", StringComparison.OrdinalIgnoreCase))
-                {
-                    return new PlayerDecision(Quit: false, Col0: null, Type: null, Command: "redo");
+                    case "H":// Help
+                        HelpText.ShowHelpInTurn();
+                        continue; // resets to allow a new input
+                    case "Q": // Quit
+                        return new PlayerDecision(Col0: null, Type: null, Command: "Q");
+                    case "S": //Save
+                        return new PlayerDecision(Col0: null, Type: null, Command: "S");
+                    case "U": //Undo
+                        return new PlayerDecision(Col0: null, Type: null, Command: "U");
+                    case "R": //Redo
+                        return new PlayerDecision(Col0: null, Type: null, Command: "R");
                 }
 
                 if (!int.TryParse(raw, out int col1)) continue;
@@ -49,6 +47,7 @@ namespace LineUpV3.Models.PlayerSpace
                 Console.Write($"\n{Name} - {DiscsRemaining} discs left \nChoose disc type: [|Default| O=Ordinary {_bag[DiscType.Ordinary]}, B=Boring {_bag[DiscType.Boring]}, E=Exploding {_bag[DiscType.Exploding]}, M= Magnetic {_bag[DiscType.Magnetic]}] (H for help):: ");
                 string? t = Console.ReadLine()?.Trim().ToUpperInvariant();
 
+                // backup in case of help request at this point
                 if (t == "H")
                 {
                     HelpText.ShowHelpInTurn();
@@ -78,7 +77,7 @@ namespace LineUpV3.Models.PlayerSpace
                     continue;
                 }
 
-                return new PlayerDecision(Quit: false, Col0: col0, Type: chosen);
+                return new PlayerDecision(Col0: col0, Type: chosen);
             }
         }
     }
