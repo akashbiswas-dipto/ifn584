@@ -5,8 +5,13 @@ using System.IO;
 using System.Linq;
 using LineUpV3.Models.PlayerSpace;
 using LineUpV3.Models.DiscSpace;
-using LineUpV3.Models.SavingSpace;
-using static LineUpV3.UtilSpace.SavingUtils;
+using LineUpV3.Models.SavingSpace; // Contains the new static SaveGame class with SaveToFile
+using LineUpV3.Models.BoardSpace.ConcreteFactory; // For IRotation
+using LineUpV3.UtilSpace; // Required for access to utilities like DiscSymbols
+
+// Assuming the concrete classes Board, HumanPlayer, and ComputerPlayer are accessible
+// via the existing using statements or are defined in their respective namespaces.
+// We are explicitly using the concrete classes here for deserialization purposes.
 
 namespace LineUpV3.Models.GameSpace
 {
@@ -25,32 +30,42 @@ namespace LineUpV3.Models.GameSpace
         private IRotation? _rotationStrategy;
         public bool IsTestMode { get; private set; } = false;
 
-        // ============ Undo/Redo History (REPLACING OLD FIELDS) =============
+        // ============ Undo/Redo History =============
         private readonly List<GameState> _history = new();
-        private int _historyIndex = -1; // Renamed from _currentIndex
+        private int _historyIndex = -1;
 
-        /// <summary>
-        /// Initialize history after game create/load. Starts history with the current state.
-        /// </summary>
-        private void InitializeHistory()
+        public void InitializeHistoryForNewGame()
         {
             _history.Clear();
             _history.Add(SaveGameState());
             _historyIndex = 0;
         }
 
-        /// <summary>
-        /// Record a snapshot after a new move. If there are future states (redo), clear them first.
-        /// </summary>
+        public void InitializeHistoryFromFileLoad(GameState loadedState)
+        {
+            _history.Clear();
+
+            var previousPlayerId = (loadedState.CurrentPlayerId == PlayerId.Player1) ? PlayerId.Player2 : PlayerId.Player1;
+            int previousTurnNumber = loadedState.TurnNumber;
+
+            var dummyState = loadedState with
+            {
+                CurrentPlayerId = previousPlayerId,
+                TurnNumber = previousTurnNumber
+            };
+
+            _history.Add(dummyState);
+            _history.Add(SaveGameState());
+
+            _historyIndex = 1;
+        }
+
         private void RecordSnapshot()
         {
-            // If we've undone some moves (historyIndex not at the end), drop future states.
             if (_historyIndex < _history.Count - 1)
             {
                 _history.RemoveRange(_historyIndex + 1, _history.Count - (_historyIndex + 1));
             }
-
-            // Append current state and advance index.
             _history.Add(SaveGameState());
             _historyIndex = _history.Count - 1;
         }
@@ -58,10 +73,6 @@ namespace LineUpV3.Models.GameSpace
         private bool CanUndo() => _historyIndex > 0;
         private bool CanRedo() => _historyIndex < (_history.Count - 1);
 
-        /// <summary>
-        /// Undo moves one step (option 2 semantics implemented by capturing snapshots after each turn).
-        /// Returns true if undo succeeded.
-        /// </summary>
         public bool Undo(IGamePrinter printer)
         {
             if (!CanUndo())
@@ -70,40 +81,38 @@ namespace LineUpV3.Models.GameSpace
                 return false;
             }
 
-            // Move back in history and load that state
             _historyIndex--;
-            var s = _history[_historyIndex];
-
-            // NOTE: We MUST load the state BEFORE displaying the board.
-            LoadGameState(s);
+            LoadGameState(_history[_historyIndex]);
 
             printer?.Info("Undo performed.");
-            // ADDED: Show the board after undo
-            printer?.Show(Board, $"After Undo (Turn {TurnNumber})");
+            var waitingPlayer = CurrentPlayer == PlayerId.Player1 ? Player1 : Player2;
+
+            printer?.Info($"The turn returns to {waitingPlayer.Name}. You can type 'REDO' now to re-apply the move you just undid, or make a new move.");
+            printer!.Show(Board, $"After Undo (Turn {TurnNumber})");
 
             return true;
         }
 
-        /// <summary>
-        /// Redo moves one step. Returns true if redo succeeded.
-        /// </summary>
         public bool Redo(IGamePrinter printer)
         {
             if (!CanRedo())
             {
-                printer?.Info("Nothing to redo.");
+                if (_history.Count > 1 && _historyIndex == _history.Count - 1)
+                {
+                    printer?.Info("Nothing to redo. A new move was made, which permanently cleared the redo option.");
+                }
+                else
+                {
+                    printer?.Info("Nothing to redo.");
+                }
                 return false;
             }
 
             _historyIndex++;
-            var s = _history[_historyIndex];
-
-            // NOTE: We MUST load the state BEFORE displaying the board.
-            LoadGameState(s);
+            LoadGameState(_history[_historyIndex]);
 
             printer?.Info("Redo performed.");
-            // ADDED: Show the board after redo
-            printer?.Show(Board, $"After Redo (Turn {TurnNumber})");
+            printer!.Show(Board, $"After Redo (Turn {TurnNumber})");
 
             return true;
         }
@@ -112,7 +121,7 @@ namespace LineUpV3.Models.GameSpace
         private Game() { }
 
         public static Game Create(IBoard board, IPlayer player1, IPlayer player2,
-                                 int gameMode, IRotation? rotation, bool isTestMode)
+                                     int gameMode, IRotation? rotation, bool isTestMode)
         {
             var g = new Game
             {
@@ -131,8 +140,7 @@ namespace LineUpV3.Models.GameSpace
             player1.ConfigureForBoard(board, gameMode);
             player2.ConfigureForBoard(board, gameMode);
 
-            // Initialize undo/redo history with current state (REPLACING OLD SaveSnapshot)
-            g.InitializeHistory();
+            g.InitializeHistoryForNewGame();
 
             return g;
         }
@@ -140,127 +148,117 @@ namespace LineUpV3.Models.GameSpace
         private IPlayer Current => (CurrentPlayer == PlayerId.Player1) ? Player1 : Player2;
         private IPlayer Other => (CurrentPlayer == PlayerId.Player1) ? Player2 : Player1;
 
+        // ============ Save Confirmation ============
+
+        /// <summary>
+        /// Prompts the user to confirm if they want to save the game.
+        /// This is private and only used when 'Q' is entered in the Turn method.
+        /// </summary>
+        private static bool ConfirmSave(IGamePrinter printer)
+        {
+            printer.Info("Save game before exiting? (y/n): ");
+            string? s = Console.ReadLine();
+            return s != null && s.Trim().StartsWith("y", StringComparison.OrdinalIgnoreCase);
+        }
+
         // ============ Turn Logic ============
         public bool Turn(IGamePrinter printer)
         {
             FinalState finalState;
 
-            if (Status != GameStatus.InProgress)
-                return false;
+            if (Status != GameStatus.InProgress) return false;
 
             var player = Current;
-
             var decision = player.ChooseMove(Board);
+
             if (decision.Quit)
             {
-                printer.Info($"{player.Id} has quit the game.");
                 if (ConfirmSave(printer))
                 {
-                    SavePaths.EnsureDir();
-                    printer.Info("Type a name for this save (e.g., 'after move 12'):");
-                    Console.Write("Save name: ");
-                    var raw = Console.ReadLine() ?? "untitled";
-                    var path = SavePaths.MakePath(raw);
+                    // Prompt user for filename
+                    printer.Info("Enter filename to save (default: savegame.txt): ");
+                    string? input = Console.ReadLine()?.Trim();
 
-                    if (File.Exists(path))
+                    string filename = string.IsNullOrEmpty(input) ? "savegame.txt" : input;
+
+                    // Automatically add the .sav extension if the user didn't specify one
+                    if (!filename.Contains('.'))
                     {
-                        printer.Info($"A save named '{Path.GetFileNameWithoutExtension(path)}' already exists.");
-                        Console.Write("Overwrite? (y/n): ");
-                        var ans = Console.ReadLine();
-                        if (ans == null || !ans.Trim().StartsWith("y", StringComparison.OrdinalIgnoreCase))
-                        {
-                            var stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                            path = SavePaths.MakePath($"{raw}_{stamp}");
-                        }
+                        filename += ".txt";
                     }
 
-                    SaveGame.SaveToFile(this, path);
-                    printer.Info($"Game saved to '{path}'.");
+                    // *** UPDATED TO USE NEW SavingSpace.SaveGame.SaveToFile method ***
+                    try
+                    {
+                        LineUpV3.Models.SavingSpace.SaveGame.SaveToFile(this, filename);
+                        printer.Info($"Game saved to '{filename}'.");
+                    }
+                    catch (IOException ex)
+                    {
+                        printer.Info($"ERROR: Failed to save game to '{filename}'. Details: {ex.Message}");
+                    }
                 }
-                return false;
+                return false; // Tells the ConsoleRunner to break the loop
             }
 
-            // Handle special commands from human input
-            if (!string.IsNullOrEmpty(decision.Command))
+            // Handle Undo/Redo commands
+            if (decision.Command?.Equals("undo", StringComparison.OrdinalIgnoreCase) == true)
             {
-                var cmd = decision.Command.Trim().ToLowerInvariant();
-                if (cmd == "undo")
-                {
-                    // Undo retains history state for redo
-                    Undo(printer);
-                    return true; // continue game (do not count as a played turn)
-                }
-                else if (cmd == "redo")
-                {
-                    Redo(printer);
-                    return true; // continue game
-                }
+                Undo(printer);
+                return true;
             }
 
+            if (decision.Command?.Equals("redo", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                Redo(printer);
+                return true;
+            }
+
+            // If no column or type was selected (shouldn't happen with valid HumanPlayer logic)
             if (decision.Col0 == null || decision.Type == null)
             {
-                if (Board.IsFull)
-                {
-                    Status = GameStatus.Finished;
-                    printer.Info("Board is full, it’s a draw.");
-                    printer.Show(Board, "Final");
-                    return false;
-                }
-                else if (player.DiscsRemaining == 0)
-                {
-                    Status = GameStatus.Finished;
-                    printer.Info("\nNo discs left to place; it’s a draw.");
-                    printer.Show(Board, "Final");
-                    return false;
-                }
-                printer.Info("Invalid move decision. Try again.");
                 return true;
             }
 
             int col0 = decision.Col0.Value;
             var type = decision.Type.Value;
 
-            if (col0 < 0 || col0 >= Board.Cols || Board.IsColumnFull(col0))
-            {
-                printer.Info($"Invalid column {col0 + 1}. Try again.");
-                return true;
-            }
-
+            // Start of actual move sequence
             printer.Info($"\n{player.Name} chooses {type} in column {col0 + 1}.");
+
+            // 1. Show Board before drop
             printer.Show(Board, "Before drop");
 
+            // Disc dropping logic
             IDisc disc;
             try { disc = player.TakeDisc(type); }
-            catch (InvalidOperationException ex)
-            {
-                printer.Info(ex.Message);
-                return true;
-            }
+            catch (InvalidOperationException ex) { printer.Info(ex.Message); return true; }
 
             int row0 = disc.Drop(Board, col0);
-            if (row0 < 0)
-            {
-                printer.Info("Column became full unexpectedly.");
-                return true;
-            }
+            if (row0 < 0) { printer.Info("Column unexpectedly became full."); return true; }
 
             var before = Board.SaveBoard();
+
+            // 2. Show Board immediately after drop
             printer.Show(Board, "After drop");
 
+            // Resolution of special disc effects
             var (changed, description) = disc.ResolveAfterDrop(Board, row0, col0);
+
             if (changed)
             {
                 var after = Board.SaveBoard();
                 if (disc.Type == DiscType.Boring)
                     RefundRemovedDiscs(before, after);
+
                 if (!string.IsNullOrWhiteSpace(description)) printer.Info(description!);
+
+                // 3. Show Board after effects (Crucial for Exploding disc visualization)
                 printer.Show(Board, "After effect");
             }
 
             finalState = GetFinalStateAfterMove(disc.Type, row0, col0, Current, Other);
-
-            if (UpdateIfFinal(finalState, printer, player.Id, player.Name, Other.Id, Other.Name))
-                return false;
+            if (UpdateIfFinal(finalState, printer, player.Id, player.Name, Other.Id, Other.Name)) return false;
 
             if (TurnNumber > 0 && TurnNumber % 5 == 0 && GameMode == 3)
             {
@@ -269,23 +267,17 @@ namespace LineUpV3.Models.GameSpace
                 printer.Show(Board, "After Spin");
 
                 finalState = GetFinalStateAfterSpin(Current, Other);
-                if (UpdateIfFinal(finalState, printer, Current.Id, Current.Name, Other.Id, Other.Name))
-                    return false;
+                if (UpdateIfFinal(finalState, printer, Current.Id, Current.Name, Other.Id, Other.Name)) return false;
             }
 
             CurrentPlayer = NextPlayer;
             NextPlayer = (NextPlayer == PlayerId.Player1) ? PlayerId.Player2 : PlayerId.Player1;
             TurnNumber++;
 
-            // RECORD the snapshot after the move: (REPLACING OLD SaveSnapshot)
             RecordSnapshot();
 
             return true;
         }
-
-        // ============ Undo / Redo ============
-        // The previous simple CanUndo/CanRedo/Undo/Redo/SaveSnapshot methods have been replaced by the
-        // more robust ones near the top of the file.
 
         // ============ Spin Board ============
         private void SpinBoard()
@@ -296,6 +288,7 @@ namespace LineUpV3.Models.GameSpace
         }
 
         // ============ Helpers ============
+
         private IPlayer PlayerById(PlayerId id) => id == PlayerId.Player1 ? Player1 : Player2;
 
         private void RefundRemovedDiscs(BoardState before, BoardState after)
@@ -418,13 +411,6 @@ namespace LineUpV3.Models.GameSpace
             }
         }
 
-        private static bool ConfirmSave(IGamePrinter printer)
-        {
-            printer.Info("Save game before exiting? (y/n): ");
-            string? s = Console.ReadLine();
-            return s != null && s.Trim().StartsWith("y", StringComparison.OrdinalIgnoreCase);
-        }
-
         public GameState SaveGameState()
         {
             return new GameState(
@@ -432,37 +418,45 @@ namespace LineUpV3.Models.GameSpace
                 Player1.SavePlayer(),
                 Player2.SavePlayer(),
                 CurrentPlayer,
-                GameMode
+                GameMode,
+                TurnNumber
             );
         }
 
         public void LoadGameState(GameState s)
         {
+            // CRITICAL FIX 1: Load GameMode first, as player configuration depends on it.
+            GameMode = s.GameMode;
+
+            // Assuming LineUpV3.Models.BoardSpace.Board is the concrete class
             if (Board == null)
-                Board = new Board(s.Board.Rows, s.Board.Cols);
+                Board = new LineUpV3.Models.BoardSpace.Board(s.Board.Rows, s.Board.Cols);
 
             Board.LoadBoard(s.Board);
 
             if (Player1 == null || Player2 == null)
             {
+                // Assuming HumanPlayer and ComputerPlayer are concrete classes
                 Player1 = s.Player1.Type == PlayerType.Human
-                    ? new HumanPlayer(s.Player1.Id, s.Player1.Name)
-                    : new ComputerPlayer(s.Player1.Id, s.Player1.Name);
+                    ? new LineUpV3.Models.PlayerSpace.HumanPlayer(s.Player1.Id, s.Player1.Name)
+                    : new LineUpV3.Models.PlayerSpace.ComputerPlayer(s.Player1.Id, s.Player1.Name);
 
                 Player2 = s.Player2.Type == PlayerType.Human
-                    ? new HumanPlayer(s.Player2.Id, s.Player2.Name)
-                    : new ComputerPlayer(s.Player2.Id, s.Player2.Name);
+                    ? new LineUpV3.Models.PlayerSpace.HumanPlayer(s.Player2.Id, s.Player2.Name)
+                    : new LineUpV3.Models.PlayerSpace.ComputerPlayer(s.Player2.Id, s.Player2.Name);
+
+                // CRITICAL FIX 2: Newly instantiated players must be configured for the board and game mode,
+                // mirroring the logic in Game.Create, before their specific state is loaded.
+                Player1.ConfigureForBoard(Board, GameMode);
+                Player2.ConfigureForBoard(Board, GameMode);
             }
 
             Player1.LoadPlayer(s.Player1);
             Player2.LoadPlayer(s.Player2);
             CurrentPlayer = s.CurrentPlayerId;
-            GameMode = s.GameMode;
+            TurnNumber = s.TurnNumber;
             NextPlayer = (CurrentPlayer == PlayerId.Player1) ? PlayerId.Player2 : PlayerId.Player1;
             Status = GameStatus.InProgress;
-
-            // Reset undo/redo history so undo is available (the loaded state is the current snapshot).
-            InitializeHistory();
         }
     }
 }

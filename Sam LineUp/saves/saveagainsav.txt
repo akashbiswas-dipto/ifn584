@@ -1,0 +1,35 @@
+{
+  "Board": {
+    "Rows": 8,
+    "Cols": 9,
+    "Cells": "......................................................@#.......@#.......",
+    "LastMove": {}
+  },
+  "Player1": {
+    "Id": 0,
+    "Type": 0,
+    "DiscsRemaining": 34,
+    "AllCounts": {
+      "Ordinary": 34,
+      "Boring": 0,
+      "Exploding": 0,
+      "Magnetic": 0
+    },
+    "Name": "P1"
+  },
+  "Player2": {
+    "Id": 1,
+    "Type": 0,
+    "DiscsRemaining": 34,
+    "AllCounts": {
+      "Ordinary": 34,
+      "Boring": 0,
+      "Exploding": 0,
+      "Magnetic": 0
+    },
+    "Name": "P2"
+  },
+  "CurrentPlayerId": 0,
+  "GameMode": 2,
+  "TurnNumber": 4
+}

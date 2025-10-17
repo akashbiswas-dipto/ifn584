@@ -1,22 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using LineUpV3.Models.PlayerSpace;
-using LineUpV3.Models.BoardSpace;
+﻿using LineUpV3.Models.BoardSpace;
+using LineUpV3.Models.BoardSpace.ConcreteFactory;
 using LineUpV3.Models.DiscSpace;
 using LineUpV3.Models.GameSpace;
-using LineUpV3.Models.BoardSpace.ConcreteFactory;
+using LineUpV3.Models.PlayerSpace;
+using LineUpV3.UtilSpace;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
 
 namespace LineUpV3.Models.SavingSpace
 {
-    internal sealed record SaveFileDto(GameState State, bool IsTestMode);
     internal static class SaveGame
     {
-
-        public static void SaveToFile(Game game, string path)
+        // Save directory is managed via SavingUtils
+        public static void SaveToFile(Game game, string fileName)
         {
+            string path = SavingUtils.SavePaths.MakePath(fileName);
+
             var state = game.SaveGameState();
             var b = state.Board;
             var p1 = state.Player1;
@@ -28,6 +30,7 @@ namespace LineUpV3.Models.SavingSpace
             sb.AppendLine("[Game]");
             sb.AppendLine($"CurrentPlayer={state.CurrentPlayerId}");
             sb.AppendLine($"GameMode={state.GameMode}");
+            sb.AppendLine($"TurnNumber={state.TurnNumber}");
             sb.AppendLine($"IsTestMode={game.IsTestMode}");
             sb.AppendLine();
 
@@ -39,16 +42,18 @@ namespace LineUpV3.Models.SavingSpace
             sb.AppendLine($"Cells={b.Cells}");
             sb.AppendLine();
 
-            //Players
+            // Players
             WritePlayer(sb, "Player1", p1);
             WritePlayer(sb, "Player2", p2);
 
-            // output it all to a file as 'save'
             File.WriteAllText(path, sb.ToString());
         }
 
         public static Game LoadFromFile(string path)
         {
+            if (!File.Exists(path))
+                throw new FileNotFoundException($"Save file not found: {path}");
+
             var lines = File.ReadAllLines(path);
             var sections = ParseSections(lines);
 
@@ -56,8 +61,8 @@ namespace LineUpV3.Models.SavingSpace
             var gsec = sections["Game"];
             var currentPlayerId = Enum.Parse<PlayerId>(gsec["CurrentPlayer"]);
             var gameMode = int.Parse(gsec["GameMode"]);
+            var turnNumber = int.Parse(gsec.GetValueOrDefault("TurnNumber", "0"));
             var isTestMode = bool.TryParse(gsec.GetValueOrDefault("IsTestMode", "false"), out var f) && f;
-
 
             // Board section
             var bsec = sections["Board"];
@@ -76,32 +81,33 @@ namespace LineUpV3.Models.SavingSpace
 
             var boardState = new BoardState(rows, cols, cells, last);
 
-            // Players section
-            var p1 = ReadPlayer(sections["Player1"]);
-            var p2 = ReadPlayer(sections["Player2"]);
+            // Players
+            var p1State = ReadPlayer(sections["Player1"]);
+            var p2State = ReadPlayer(sections["Player2"]);
 
-            //rebuild concrete objects
+            // Rebuild concrete objects
             IBoard board = new Board(rows, cols);
-            board.LoadBoard(boardState);
+            IPlayer player1 = p1State.Type == PlayerType.Human
+                ? new HumanPlayer(p1State.Id, p1State.Name)
+                : new ComputerPlayer(p1State.Id, p1State.Name);
 
-            IPlayer player1 = p1.Type == PlayerType.Human
-                ? new HumanPlayer(p1.Id, p1.Name)
-                : new ComputerPlayer(p1.Id, p1.Name);
+            IPlayer player2 = p2State.Type == PlayerType.Human
+                ? new HumanPlayer(p2State.Id, p2State.Name)
+                : new ComputerPlayer(p2State.Id, p2State.Name);
 
-            IPlayer player2 = p2.Type == PlayerType.Human
-                ? new HumanPlayer(p2.Id, p2.Name)
-                : new ComputerPlayer(p2.Id, p2.Name);
+            player1.LoadPlayer(p1State);
+            player2.LoadPlayer(p2State);
 
             IRotation? rotation = new RotationByModeFactory().Create(gameMode);
 
-            // hand remade game back
             var game = Game.Create(board, player1, player2, gameMode, rotation, isTestMode);
-            game.LoadGameState(new GameState(boardState, p1, p2, currentPlayerId, gameMode));
+
+            var gameState = new GameState(boardState, p1State, p2State, currentPlayerId, gameMode, turnNumber);
+            game.LoadGameState(gameState);
+            game.InitializeHistoryFromFileLoad(gameState);
 
             return game;
         }
-
-        // ========== Helpers ==========
 
         private static void WritePlayer(StringBuilder sb, string sectionName, PlayerState p)
         {
@@ -109,7 +115,6 @@ namespace LineUpV3.Models.SavingSpace
             sb.AppendLine($"Id={p.Id}");
             sb.AppendLine($"Type={p.Type}");
             sb.AppendLine($"Name={p.Name}");
-            // Bag counts (Ordinary, Boring, Exploding, and now Magnetic) are already in PlayerState
             int o = p.AllCounts.TryGetValue(DiscType.Ordinary, out var _o) ? _o : 0;
             int b = p.AllCounts.TryGetValue(DiscType.Boring, out var _b) ? _b : 0;
             int e = p.AllCounts.TryGetValue(DiscType.Exploding, out var _e) ? _e : 0;
@@ -140,26 +145,23 @@ namespace LineUpV3.Models.SavingSpace
 
         private static Dictionary<string, Dictionary<string, string>> ParseSections(string[] lines)
         {
-
-            // making a dictionary out of what was saved, to aid in pulling the right bits to reload
             var dict = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
             Dictionary<string, string>? cur = null;
 
             foreach (var raw in lines)
             {
-                // Safety cleanup
                 var line = raw.Trim();
                 if (string.IsNullOrEmpty(line) || line.StartsWith("#")) continue;
 
-                if (line.StartsWith("[") && line.EndsWith("]")) // pull out the sections as the new sub dictionary key
+                if (line.StartsWith("[") && line.EndsWith("]"))
                 {
                     var name = line.Substring(1, line.Length - 2);
                     cur = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                     dict[name] = cur;
                 }
-                else if (cur != null) // once we have a section header
+                else if (cur != null)
                 {
-                    int eq = line.IndexOf('='); // find the =. Left is key, right is value
+                    int eq = line.IndexOf('=');
                     if (eq > 0)
                     {
                         var k = line.Substring(0, eq).Trim();
@@ -170,6 +172,5 @@ namespace LineUpV3.Models.SavingSpace
             }
             return dict;
         }
-
     }
 }
