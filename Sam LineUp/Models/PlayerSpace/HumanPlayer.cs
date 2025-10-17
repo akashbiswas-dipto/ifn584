@@ -17,7 +17,7 @@ namespace LineUpV3.Models.PlayerSpace
         {
             while (true)
             {
-                Console.Write($"\n{Name} ({Id}) — column 1..{board.Cols} (H for Help, Q to quit): ");
+                Console.Write($"\n{Name} ({Id}) — column 1..{board.Cols} (H for Help, Q to quit, UNDO/REDO): ");
                 string? raw = Console.ReadLine()?.Trim();
 
                 if (string.IsNullOrEmpty(raw)) continue;
@@ -28,6 +28,16 @@ namespace LineUpV3.Models.PlayerSpace
                 {
                     HelpText.ShowHelpInTurn();
                     continue;
+                }
+
+                // Add undo/redo handling
+                if (raw.Equals("UNDO", StringComparison.OrdinalIgnoreCase))
+                {
+                    return new PlayerDecision(Quit: false, Col0: null, Type: null, Command: "undo");
+                }
+                if (raw.Equals("REDO", StringComparison.OrdinalIgnoreCase))
+                {
+                    return new PlayerDecision(Quit: false, Col0: null, Type: null, Command: "redo");
                 }
 
                 if (!int.TryParse(raw, out int col1)) continue;
@@ -48,15 +58,16 @@ namespace LineUpV3.Models.PlayerSpace
                 DiscType? chosen = t switch
                 {
                     "O" => DiscType.Ordinary,
-                    ""  => DiscType.Ordinary,
+                    "" => DiscType.Ordinary,
                     null => DiscType.Ordinary,
                     "B" => DiscType.Boring,
                     "E" => DiscType.Exploding,
                     "M" => DiscType.Magnetic,
                     // Else change the flag
-                    _ => (isValidToken = false, DiscType.Ordinary).Item2 
+                    _ => (isValidToken = false, DiscType.Ordinary).Item2
                 };
-                if (!isValidToken) {
+                if (!isValidToken)
+                {
                     Console.WriteLine("Invalid input. Please enter O, B, E, or M.");
                     continue;
                 }

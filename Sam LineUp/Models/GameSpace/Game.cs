@@ -1,15 +1,12 @@
 ﻿using LineUpV3.Models.BoardSpace;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using LineUpV3.Models.PlayerSpace;
 using LineUpV3.Models.DiscSpace;
 using LineUpV3.Models.SavingSpace;
-using System.Text.Json;
 using static LineUpV3.UtilSpace.SavingUtils;
-using System.Diagnostics.Metrics;
 
 namespace LineUpV3.Models.GameSpace
 {
@@ -21,24 +18,101 @@ namespace LineUpV3.Models.GameSpace
         public IPlayer Player2 { get; private set; } = null!;
         public PlayerId CurrentPlayer { get; private set; }
         public PlayerId NextPlayer { get; private set; }
-
         public int TurnNumber { get; private set; }
-
         public PlayerId Winner { get; private set; }
-
         public GameStatus Status { get; private set; } = GameStatus.NotStarted;
-
         public int GameMode { get; private set; }
-
         private IRotation? _rotationStrategy;
-
         public bool IsTestMode { get; private set; } = false;
 
-        // ============ Create the Board from the Factories ========
+        // ============ Undo/Redo History (REPLACING OLD FIELDS) =============
+        private readonly List<GameState> _history = new();
+        private int _historyIndex = -1; // Renamed from _currentIndex
+
+        /// <summary>
+        /// Initialize history after game create/load. Starts history with the current state.
+        /// </summary>
+        private void InitializeHistory()
+        {
+            _history.Clear();
+            _history.Add(SaveGameState());
+            _historyIndex = 0;
+        }
+
+        /// <summary>
+        /// Record a snapshot after a new move. If there are future states (redo), clear them first.
+        /// </summary>
+        private void RecordSnapshot()
+        {
+            // If we've undone some moves (historyIndex not at the end), drop future states.
+            if (_historyIndex < _history.Count - 1)
+            {
+                _history.RemoveRange(_historyIndex + 1, _history.Count - (_historyIndex + 1));
+            }
+
+            // Append current state and advance index.
+            _history.Add(SaveGameState());
+            _historyIndex = _history.Count - 1;
+        }
+
+        private bool CanUndo() => _historyIndex > 0;
+        private bool CanRedo() => _historyIndex < (_history.Count - 1);
+
+        /// <summary>
+        /// Undo moves one step (option 2 semantics implemented by capturing snapshots after each turn).
+        /// Returns true if undo succeeded.
+        /// </summary>
+        public bool Undo(IGamePrinter printer)
+        {
+            if (!CanUndo())
+            {
+                printer?.Info("Nothing to undo.");
+                return false;
+            }
+
+            // Move back in history and load that state
+            _historyIndex--;
+            var s = _history[_historyIndex];
+
+            // NOTE: We MUST load the state BEFORE displaying the board.
+            LoadGameState(s);
+
+            printer?.Info("Undo performed.");
+            // ADDED: Show the board after undo
+            printer?.Show(Board, $"After Undo (Turn {TurnNumber})");
+
+            return true;
+        }
+
+        /// <summary>
+        /// Redo moves one step. Returns true if redo succeeded.
+        /// </summary>
+        public bool Redo(IGamePrinter printer)
+        {
+            if (!CanRedo())
+            {
+                printer?.Info("Nothing to redo.");
+                return false;
+            }
+
+            _historyIndex++;
+            var s = _history[_historyIndex];
+
+            // NOTE: We MUST load the state BEFORE displaying the board.
+            LoadGameState(s);
+
+            printer?.Info("Redo performed.");
+            // ADDED: Show the board after redo
+            printer?.Show(Board, $"After Redo (Turn {TurnNumber})");
+
+            return true;
+        }
+
+        // ============ Create Game ============
         private Game() { }
 
         public static Game Create(IBoard board, IPlayer player1, IPlayer player2,
-                                int gameMode, IRotation? rotation, bool isTestMode)
+                                 int gameMode, IRotation? rotation, bool isTestMode)
         {
             var g = new Game
             {
@@ -54,16 +128,19 @@ namespace LineUpV3.Models.GameSpace
             };
 
             g._rotationStrategy = rotation;
-
             player1.ConfigureForBoard(board, gameMode);
             player2.ConfigureForBoard(board, gameMode);
+
+            // Initialize undo/redo history with current state (REPLACING OLD SaveSnapshot)
+            g.InitializeHistory();
+
             return g;
         }
+
         private IPlayer Current => (CurrentPlayer == PlayerId.Player1) ? Player1 : Player2;
         private IPlayer Other => (CurrentPlayer == PlayerId.Player1) ? Player2 : Player1;
 
-        // ============ Game Turn ========
-
+        // ============ Turn Logic ============
         public bool Turn(IGamePrinter printer)
         {
             FinalState finalState;
@@ -73,7 +150,6 @@ namespace LineUpV3.Models.GameSpace
 
             var player = Current;
 
-            // Move Decision
             var decision = player.ChooseMove(Board);
             if (decision.Quit)
             {
@@ -82,7 +158,6 @@ namespace LineUpV3.Models.GameSpace
                 {
                     SavePaths.EnsureDir();
                     printer.Info("Type a name for this save (e.g., 'after move 12'):");
-
                     Console.Write("Save name: ");
                     var raw = Console.ReadLine() ?? "untitled";
                     var path = SavePaths.MakePath(raw);
@@ -94,7 +169,6 @@ namespace LineUpV3.Models.GameSpace
                         var ans = Console.ReadLine();
                         if (ans == null || !ans.Trim().StartsWith("y", StringComparison.OrdinalIgnoreCase))
                         {
-                            // auto-append timestamp to avoid overwrite
                             var stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
                             path = SavePaths.MakePath($"{raw}_{stamp}");
                         }
@@ -106,15 +180,29 @@ namespace LineUpV3.Models.GameSpace
                 return false;
             }
 
-            // check for nulls
+            // Handle special commands from human input
+            if (!string.IsNullOrEmpty(decision.Command))
+            {
+                var cmd = decision.Command.Trim().ToLowerInvariant();
+                if (cmd == "undo")
+                {
+                    // Undo retains history state for redo
+                    Undo(printer);
+                    return true; // continue game (do not count as a played turn)
+                }
+                else if (cmd == "redo")
+                {
+                    Redo(printer);
+                    return true; // continue game
+                }
+            }
+
             if (decision.Col0 == null || decision.Type == null)
             {
-                // check if the board is full. Should be handled by the end of turn check
-                // Computer player will return an null move if no valid moves available
                 if (Board.IsFull)
                 {
                     Status = GameStatus.Finished;
-                    printer.Info("Board is full, its a draw.");
+                    printer.Info("Board is full, it’s a draw.");
                     printer.Show(Board, "Final");
                     return false;
                 }
@@ -125,30 +213,24 @@ namespace LineUpV3.Models.GameSpace
                     printer.Show(Board, "Final");
                     return false;
                 }
-                printer.Info("Invalid move decision (missing column or type). Try again.");
-                return true; // stay InProgress; caller will call Turn() again
+                printer.Info("Invalid move decision. Try again.");
+                return true;
             }
 
-            int col0 = decision.Col0!.Value;
-            var type = decision.Type!.Value;
+            int col0 = decision.Col0.Value;
+            var type = decision.Type.Value;
 
-            // Validate column
             if (col0 < 0 || col0 >= Board.Cols || Board.IsColumnFull(col0))
             {
                 printer.Info($"Invalid column {col0 + 1}. Try again.");
-                return true; // stay InProgress; caller will call Turn() again
+                return true;
             }
 
             printer.Info($"\n{player.Name} chooses {type} in column {col0 + 1}.");
-
             printer.Show(Board, "Before drop");
 
-            // Take disc (bag) and drop
             IDisc disc;
-            try
-            {
-                disc = player.TakeDisc(type);
-            }
+            try { disc = player.TakeDisc(type); }
             catch (InvalidOperationException ex)
             {
                 printer.Info(ex.Message);
@@ -158,23 +240,19 @@ namespace LineUpV3.Models.GameSpace
             int row0 = disc.Drop(Board, col0);
             if (row0 < 0)
             {
-                // Should not happen, as we checked IsColumnFull above already. This is a backup.
-                printer.Info("Column became full unexpectedly. Try another move.");
+                printer.Info("Column became full unexpectedly.");
                 return true;
             }
 
             var before = Board.SaveBoard();
-
             printer.Show(Board, "After drop");
 
-            // Special effect's resolution, if any
             var (changed, description) = disc.ResolveAfterDrop(Board, row0, col0);
             if (changed)
             {
                 var after = Board.SaveBoard();
                 if (disc.Type == DiscType.Boring)
                     RefundRemovedDiscs(before, after);
-
                 if (!string.IsNullOrWhiteSpace(description)) printer.Info(description!);
                 printer.Show(Board, "After effect");
             }
@@ -184,72 +262,42 @@ namespace LineUpV3.Models.GameSpace
             if (UpdateIfFinal(finalState, printer, player.Id, player.Name, Other.Id, Other.Name))
                 return false;
 
-            // End-of-turn snapshot
-            // printer.Show(Board, "End of turn");
-
-            // AT The end of every fifth turn, spin the board
             if (TurnNumber > 0 && TurnNumber % 5 == 0 && GameMode == 3)
             {
-                // spin the board 90 degrees
                 printer.Show(Board, "Before Spin");
                 SpinBoard();
-
                 printer.Show(Board, "After Spin");
 
-                // Resolve the winner if any
                 finalState = GetFinalStateAfterSpin(Current, Other);
-
                 if (UpdateIfFinal(finalState, printer, Current.Id, Current.Name, Other.Id, Other.Name))
                     return false;
             }
 
-            // Next player + turn count
             CurrentPlayer = NextPlayer;
             NextPlayer = (NextPlayer == PlayerId.Player1) ? PlayerId.Player2 : PlayerId.Player1;
             TurnNumber++;
 
+            // RECORD the snapshot after the move: (REPLACING OLD SaveSnapshot)
+            RecordSnapshot();
+
             return true;
         }
 
-        // ============ Spin Rules =============
-        // Execute board rotation using the configured strategy
-            private void SpinBoard()
+        // ============ Undo / Redo ============
+        // The previous simple CanUndo/CanRedo/Undo/Redo/SaveSnapshot methods have been replaced by the
+        // more robust ones near the top of the file.
+
+        // ============ Spin Board ============
+        private void SpinBoard()
         {
             if (_rotationStrategy == null)
-            {
-                throw new InvalidOperationException(
-                    "Rotation strategy is not configured for this game mode.");
-            }
-
-            // Apply the rotation to the board
+                throw new InvalidOperationException("Rotation strategy not configured.");
             Board.ApplyRotation(_rotationStrategy);
         }
-        
-
-        // ========== Undo/Redo functions ==========
-
-        // Should be a case of leveraging the existing GameState, to save an array, or maybe dict, with turn and game state. 
-
-        // can then "load" a previous state using the LoadGame functions.
-
-        // Looks like we need to be able to redo, so may need to add a . after the load. 
-
-        // 1.0, 2.0 means initial game
-        // 1.1, 2.1 means loaded branch game
-        // 1.0, 2.0, 3.0, (UNDO) 2.1, 3.1, 4.1, (UNDO) 1.0, (REDO) 3.0.
-
-        // Can lift code from the save load game logic, and lift printer(board, title) to show the state at each of them.
-
-        // Turns into 5D chess very quickly.
-
 
         // ============ Helpers ============
+        private IPlayer PlayerById(PlayerId id) => id == PlayerId.Player1 ? Player1 : Player2;
 
-        // Better to do this here, since we can have both states
-        private IPlayer PlayerById(PlayerId id) =>
-            id == PlayerId.Player1 ? Player1 : Player2;
-
-        // only applying this to Boring currently. But would work for exploding too.
         private void RefundRemovedDiscs(BoardState before, BoardState after)
         {
             var cols = Board.Cols;
@@ -263,38 +311,22 @@ namespace LineUpV3.Models.GameSpace
 
             for (int i = 0; i < cols; i++)
             {
-                // check if the col changed
-                if (!changedCols[i])
-                {
-                    continue;
-                }
-
-                // scan the column for counts of each disc, and compare before/after
+                if (!changedCols[i]) continue;
                 var beforeCounts = new Dictionary<(PlayerId, DiscType), int>();
                 var afterCounts = new Dictionary<(PlayerId, DiscType), int>();
 
-                for (int r=0; r < rows; r++)
+                for (int r = 0; r < rows; r++)
                 {
                     int index = r * cols + i;
-
                     char countB = bCells[index];
-                    // count before
                     if (countB != '.' && DiscSymbols.TryParse(countB, out var ownerB, out var typeB))
-                    {
-                        var keyB = (ownerB, typeB);
-                        beforeCounts[keyB] = beforeCounts.GetValueOrDefault(keyB) + 1;
-                    }
+                        beforeCounts[(ownerB, typeB)] = beforeCounts.GetValueOrDefault((ownerB, typeB)) + 1;
 
                     char countA = aCells[index];
                     if (countA != '.' && DiscSymbols.TryParse(countA, out var ownerA, out var typeA))
-                    {
-                        var keyA = (ownerA, typeA);
-                        afterCounts[keyA] = afterCounts.GetValueOrDefault(keyA) + 1;
-                    }
-
+                        afterCounts[(ownerA, typeA)] = afterCounts.GetValueOrDefault((ownerA, typeA)) + 1;
                 }
 
-                // compare beforeCounts and afterCounts, refunding any missing discs
                 foreach (var kv in beforeCounts)
                 {
                     var key = kv.Key;
@@ -304,44 +336,34 @@ namespace LineUpV3.Models.GameSpace
                     if (removed > 0)
                     {
                         var (owner, type) = key;
-                        PlayerById(owner).Refund(type, removed); // refund to the owner, not current player
+                        PlayerById(owner).Refund(type, removed);
                     }
                 }
             }
+        }
 
-    }
-
-        // Pulling the win/draw logic out of Turn() to make it clearer
         internal enum FinalState { None, CurrentWin, OpponentWin, DoubleWin, Draw, NoDiscsLeft }
 
-        // Helper to determine if the game has reached a terminal (read, we should exit) state after the last move
         private FinalState GetFinalStateAfterMove(
             DiscType lastType, int row0, int col0, IPlayer current, IPlayer other)
         {
             bool currentWon;
             bool otherWon = false;
             if (lastType == DiscType.Ordinary)
-            {
                 currentWon = Board.IsWinningMove(Board, row0, col0, current.Id);
-            }
-            else // check whole board for wins
+            else
             {
                 currentWon = Board.CheckForWin(current.Id);
                 otherWon = Board.CheckForWin(other.Id);
             }
 
-            if (currentWon && otherWon)         
-                return FinalState.DoubleWin;
-            if (currentWon) 
-                return FinalState.CurrentWin;
-            if (otherWon) 
-                return FinalState.OpponentWin;
-            if (Board.IsFull) 
-                return FinalState.Draw;
+            if (currentWon && otherWon) return FinalState.DoubleWin;
+            if (currentWon) return FinalState.CurrentWin;
+            if (otherWon) return FinalState.OpponentWin;
+            if (Board.IsFull) return FinalState.Draw;
             if (current.DiscsRemaining == 0 && other.DiscsRemaining == 0)
                 return FinalState.NoDiscsLeft;
 
-            // otherwise, final state not reached, keep going
             return FinalState.None;
         }
 
@@ -350,17 +372,11 @@ namespace LineUpV3.Models.GameSpace
             bool currentWon = Board.CheckForWin(current.Id);
             bool otherWon = Board.CheckForWin(other.Id);
 
-            // run through the win conditions
-            if (currentWon && otherWon)
-                return FinalState.DoubleWin;
-            if (currentWon)
-                return FinalState.CurrentWin;
-            if (otherWon)
-                return FinalState.OpponentWin;
-            if (Board.IsFull)
-                return FinalState.Draw;
-
-            return FinalState.None; 
+            if (currentWon && otherWon) return FinalState.DoubleWin;
+            if (currentWon) return FinalState.CurrentWin;
+            if (otherWon) return FinalState.OpponentWin;
+            if (Board.IsFull) return FinalState.Draw;
+            return FinalState.None;
         }
 
         private bool UpdateIfFinal(
@@ -376,38 +392,32 @@ namespace LineUpV3.Models.GameSpace
                     printer.Info($"{currentName} wins!");
                     printer.Show(Board, "Final");
                     return true;
-
                 case FinalState.OpponentWin:
                     Winner = other;
                     Status = GameStatus.Finished;
                     printer.Info($"{otherName} wins!");
                     printer.Show(Board, "Final");
                     return true;
-
                 case FinalState.DoubleWin:
                     Status = GameStatus.Finished;
                     printer.Info("Both players have a line; it’s a draw.");
                     printer.Show(Board, "Final");
                     return true;
-
                 case FinalState.Draw:
                     Status = GameStatus.Finished;
                     printer.Info("Board is full; it’s a draw.");
                     printer.Show(Board, "Final");
                     return true;
-
                 case FinalState.NoDiscsLeft:
                     Status = GameStatus.Finished;
-                    printer.Info("No discs left for either player; it’s a draw.");
+                    printer.Info("No discs left; it’s a draw.");
                     printer.Show(Board, "Final");
                     return true;
-
                 default:
                     return false;
             }
         }
 
-        // ======== Saving and Loading ========
         private static bool ConfirmSave(IGamePrinter printer)
         {
             printer.Info("Save game before exiting? (y/n): ");
@@ -421,50 +431,38 @@ namespace LineUpV3.Models.GameSpace
                 Board.SaveBoard(),
                 Player1.SavePlayer(),
                 Player2.SavePlayer(),
-                CurrentPlayer,         // who’s up now
+                CurrentPlayer,
                 GameMode
             );
         }
 
         public void LoadGameState(GameState s)
         {
-            // re-create board if needed
             if (Board == null)
-                { Board = new Board(s.Board.Rows, s.Board.Cols);}
+                Board = new Board(s.Board.Rows, s.Board.Cols);
 
-            // then refill the board as it was
             Board.LoadBoard(s.Board);
 
-            if ( Player1 == null || Player2 == null)
+            if (Player1 == null || Player2 == null)
             {
-                // need to re-create the players
-                // first check the type to make sure its consistent
-                if (s.Player1.Type == PlayerType.Human)
-                {
-                    Player1 = new HumanPlayer(s.Player1.Id, s.Player1.Name);
-                }
-                else
-                {
-                    Player1 = new ComputerPlayer(s.Player1.Id, s.Player1.Name);
-                }
+                Player1 = s.Player1.Type == PlayerType.Human
+                    ? new HumanPlayer(s.Player1.Id, s.Player1.Name)
+                    : new ComputerPlayer(s.Player1.Id, s.Player1.Name);
 
-                if (s.Player2.Type == PlayerType.Human)
-                {
-                    Player2 = new HumanPlayer(s.Player2.Id, s.Player2.Name);
-                }
-                else
-                {
-                    Player2 = new ComputerPlayer(s.Player2.Id, s.Player2.Name);
-                }
+                Player2 = s.Player2.Type == PlayerType.Human
+                    ? new HumanPlayer(s.Player2.Id, s.Player2.Name)
+                    : new ComputerPlayer(s.Player2.Id, s.Player2.Name);
             }
-            // then refill their inventory to match the saved state
+
             Player1.LoadPlayer(s.Player1);
             Player2.LoadPlayer(s.Player2);
             CurrentPlayer = s.CurrentPlayerId;
             GameMode = s.GameMode;
             NextPlayer = (CurrentPlayer == PlayerId.Player1) ? PlayerId.Player2 : PlayerId.Player1;
             Status = GameStatus.InProgress;
+
+            // Reset undo/redo history so undo is available (the loaded state is the current snapshot).
+            InitializeHistory();
         }
     }
-    
 }

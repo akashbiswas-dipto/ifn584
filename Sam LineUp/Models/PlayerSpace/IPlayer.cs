@@ -11,7 +11,8 @@ namespace LineUpV3.Models.PlayerSpace
     enum PlayerId { Player1, Player2 }
     enum PlayerType { Human, Computer }
 
-    internal sealed record PlayerDecision(bool Quit, int? Col0, DiscType? Type);
+    internal sealed record PlayerDecision(bool Quit, int? Col0, DiscType? Type, string? Command = null); // This allows HumanPLayer to return command without breaking the existing callers.
+
 
     internal readonly record struct PlayerState(
         PlayerId Id,
