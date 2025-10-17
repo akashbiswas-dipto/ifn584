@@ -81,8 +81,9 @@ namespace LineUpV3.Models.GameSpace
             {
                 _historyIndex--;
             }
-
             LoadGameState(_history[_historyIndex]);
+            printer.Info($"The turn returns to {Current.Name}. [R]edo to re-apply the move, or make a new move.");
+            printer.Show(Board, $"After Undo (Turn {TurnNumber})");
             return true;
         }
 
@@ -105,6 +106,8 @@ namespace LineUpV3.Models.GameSpace
             }
 
             LoadGameState(_history[_historyIndex]);
+            printer.Info("Redo performed.");
+            printer.Show(Board, $"Now turn {TurnNumber} - {Current.Name}'s Turn");
             return true;
         }
 
@@ -209,15 +212,10 @@ namespace LineUpV3.Models.GameSpace
                     case "U":
                         // Undo retains history state for redo
                         Undo(printer);
-                        printer.Info($"The turn returns to {Current.Name}. [R]edo to re-apply the move, or make a new move.");
-                        printer.Show(Board, $"After Undo (Turn {TurnNumber})");
-
                         return true; // continue game (does not count as a played turn)
 
                     case "R":
                         Redo(printer);
-                        printer.Info("Redo performed.");
-                        printer.Show(Board, $"Now turn {TurnNumber} - {Current.Name}'s Turn");
                         return true; // continue game
 
                     case "S":
@@ -465,9 +463,9 @@ namespace LineUpV3.Models.GameSpace
 
         public void LoadGameState(GameState s)
         {
-
-            // recreate the board if needed
-            if (Board == null)
+            /// If the board is missing, or if the shape of the state is different from the current
+            /// Ie, post spin. Then recreate it.
+            if (Board == null || (Board.Cols != s.Board.Cols || Board.Rows != s.Board.Rows))
                 Board = new Board(s.Board.Rows, s.Board.Cols);
 
             // loading back to the state
