@@ -1,14 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace LineUpV3.UtilSpace
 {
-    public class SavingUtils
+    public static class SavingUtils
     {
+        // Handles save directory and paths
         public static class SavePaths
         {
             public static readonly string SavesDir = Path.Combine(AppContext.BaseDirectory, "saves");
@@ -26,6 +25,7 @@ namespace LineUpV3.UtilSpace
                 Path.Combine(SavesDir, Sanitize(name) + ".txt");
         }
 
+        // Lists all save files
         public static FileInfo[] ListSaves()
         {
             SavePaths.EnsureDir();
@@ -35,14 +35,17 @@ namespace LineUpV3.UtilSpace
                 : Array.Empty<FileInfo>();
         }
 
+        // Prompts user to pick a save file
         public static string? PickSavePath()
         {
             var saves = ListSaves();
             if (saves.Length == 0)
             {
-                Console.WriteLine("No saves found.");
+                Console.WriteLine("No saves found. Start a new game first.");
+                Console.ReadLine();
                 return null;
             }
+
 
             Console.WriteLine("\nAvailable saves:");
             for (int i = 0; i < saves.Length; i++)
@@ -64,6 +67,7 @@ namespace LineUpV3.UtilSpace
                 Console.WriteLine("No save by that name.");
             }
             return null;
+
         }
     }
 }

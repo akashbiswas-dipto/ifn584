@@ -8,7 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Models\GameSpace\Factories\" />
+    <Compile Remove="Models\GameSpace\Factories\**" />
+    <EmbeddedResource Remove="Models\GameSpace\Factories\**" />
+    <None Remove="Models\GameSpace\Factories\**" />
   </ItemGroup>
 
 </Project>

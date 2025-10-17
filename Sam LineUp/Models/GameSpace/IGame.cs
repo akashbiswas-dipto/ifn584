@@ -9,12 +9,10 @@ using LineUpV3.Models.BoardSpace;
 namespace LineUpV3.Models.GameSpace
 {
     // use this to track where we are in the game
-    // could add to this later?
     internal enum GameStatus { NotStarted, InProgress, Finished }
 
     internal interface IGameReadOnly
     {
-
         // keep track of players, can use the current/next to manage turns and reload.
         IBoard Board { get; }
         IPlayer Player1 { get; }
@@ -26,22 +24,21 @@ namespace LineUpV3.Models.GameSpace
         PlayerId Winner { get; }
 
         int GameMode { get; }
-
-
     }
 
     internal interface IGameCommands
     {
         // Game Commands
-        // Setup now handled by factories
-        //void Create(Board board, IPlayer player1, IPlayer player2,
-        //                        int gameMode, IRotation? rotation, bool isTestMode);
         bool Turn(IGamePrinter printer);
 
         // will need to save and load the game state
         GameState SaveGameState();
 
         void LoadGameState(GameState state);
+
+        // Add Undo/Redo to the interface
+        bool Undo(IGamePrinter printer);
+        bool Redo(IGamePrinter printer);
     }
 
     internal interface IGame : IGameReadOnly, IGameCommands
@@ -49,12 +46,14 @@ namespace LineUpV3.Models.GameSpace
         // Anything else?
     }
 
+    // CRITICAL FIX: Added TurnNumber to the GameState record (6th argument)
     internal readonly record struct GameState(
         BoardState Board,
         PlayerState Player1,
         PlayerState Player2,
         PlayerId CurrentPlayerId,
-        int GameMode
+        int GameMode,
+        int TurnNumber
         );
 
     // little interface for printing the game state
@@ -63,5 +62,4 @@ namespace LineUpV3.Models.GameSpace
         void Info(string message);
         void Show(IBoard board, string? title = null);
     }
-
 }

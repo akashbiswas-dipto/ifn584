@@ -8,7 +8,6 @@ using LineUpV3.Models.PlayerSpace;
 
 namespace LineUpV3.Models.BoardSpace
 {
-
     internal sealed class Board : IBoard
     {
         // =========== Setup =============
