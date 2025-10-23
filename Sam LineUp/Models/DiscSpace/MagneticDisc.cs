@@ -17,6 +17,8 @@ namespace LineUpV3.Models.DiscSpace
             for (int r = row + 1; r < board.Rows; r++)
             {
                 var cell = board.GetCell(r, col);
+                if (cell == null) // retroactive clearing of warning
+                    throw new Exception("Board Cell Null");
                 // if its null or not the same player, keep looking
                 if (cell.Owner != this.Owner)
                 {
